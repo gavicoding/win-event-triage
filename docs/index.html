@@ -13,7 +13,7 @@
       <div class="brand">
         <div class="logo-mark" aria-hidden="true">WET</div>
         <div>
-          <h1>win-event-triage <span class="ver">v1.0.0</span></h1>
+          <h1>win-event-triage <span class="ver">v1.1.0</span></h1>
           <p class="subtitle" data-i18n="hero_sub">Read-only Windows Security, System, PowerShell & Defender event triage mapped to MITRE ATT&CK.</p>
         </div>
       </div>
@@ -32,10 +32,12 @@
         <button class="btn btn-chip" type="button" data-preset="ransomware" data-i18n="preset_ransom">Ransomware Intrusion Chain</button>
         <button class="btn btn-chip" type="button" data-preset="insider" data-i18n="preset_insider">Insider & DCSync Escalation</button>
         <button class="btn btn-chip btn-ok" type="button" data-preset="clean" data-i18n="preset_clean">Clean AD Baseline</button>
+        <button id="btn-sample-evtx" class="btn btn-chip" type="button" data-i18n="btn_sample_evtx">Open sample .evtx</button>
         <label class="btn btn-primary file-btn">
           <span data-i18n="btn_upload">Upload JSON / Event Viewer XML</span>
-          <input id="file-input" type="file" accept=".json,.xml" hidden />
+          <input id="file-input" type="file" accept=".evtx,.json,.xml" multiple hidden />
         </label>
+        <span id="load-status" class="label-inline" role="status" aria-live="polite"></span>
       </div>
       <div class="export-group">
         <button id="btn-export-html" class="btn btn-outline" type="button">HTML</button>
@@ -93,6 +95,7 @@
       <span>MIT License | PowerShell 5.1/7+ + Python CLI + Browser Workbench</span>
     </footer>
   </div>
+  <script src="evtx.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

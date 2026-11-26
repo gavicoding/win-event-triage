@@ -1,6 +1,6 @@
 @{
     RootModule        = 'WinEventTriage.psm1'
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.1.0'
     GUID              = 'b74c51f2-8a4f-41c8-9a21-6c7f92b41901'
     Author            = 'Gabriel Souza (@gavicoding)'
     CompanyName       = 'Gavicoding'

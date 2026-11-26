@@ -1,4 +1,4 @@
-"""Parsers for JSON snapshots and native Windows Event Viewer XML exports."""
+"""Parsers for .evtx logs, JSON snapshots and native Windows Event Viewer XML exports."""
 
 from __future__ import annotations
 
@@ -7,15 +7,57 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
+from .evtx import read_evtx
 from .models import NormalizedEvent
 
 
+SUPPORTED_SUFFIXES = (".evtx", ".json", ".xml")
+
+
 def parse_events_file(path: Path) -> list[NormalizedEvent]:
-    """Load events from a JSON snapshot or native Windows Event Viewer XML file."""
+    """Load events from a .evtx log, a JSON snapshot or a native Event Viewer XML export."""
+    with open(path, "rb") as fh:
+        magic = fh.read(8)
+    if magic == b"ElfFile\x00" or path.suffix.lower() == ".evtx":
+        return [_from_flat(e) for e in read_evtx(path)]
     raw = path.read_text(encoding="utf-8", errors="replace").lstrip("\ufeff")
     if path.suffix.lower() == ".xml" or raw.lstrip().startswith("<"):
         return parse_eventviewer_xml(raw)
     return parse_json_snapshot(raw)
+
+
+def collect_inputs(paths: list[Path]) -> list[Path]:
+    """Expand folders into the log files inside them (one level deep), keeping order and removing repeats."""
+    out: list[Path] = []
+    seen: set[str] = set()
+    for p in paths:
+        items = sorted(x for x in p.iterdir() if x.is_file() and x.suffix.lower() in SUPPORTED_SUFFIXES) if p.is_dir() else [p]
+        for x in items:
+            key = str(x.resolve()).lower()
+            if key not in seen:
+                seen.add(key)
+                out.append(x)
+    return out
+
+
+def parse_many(paths: list[Path]) -> list[NormalizedEvent]:
+    events: list[NormalizedEvent] = []
+    for p in collect_inputs(paths):
+        events.extend(parse_events_file(p))
+    return events
+
+
+def _from_flat(item: dict[str, Any]) -> NormalizedEvent:
+    data = item.get("Data") if isinstance(item.get("Data"), dict) else {}
+    return NormalizedEvent(
+        event_id=int(item.get("EventId") or 0),
+        time_created=str(item.get("TimeCreated") or ""),
+        computer=str(item.get("Computer") or "unknown-host"),
+        provider=str(item.get("Provider") or ""),
+        log_name=str(item.get("LogName") or ""),
+        message="",
+        data={str(k): v for k, v in data.items()},
+    )
 
 
 def parse_json_snapshot(raw: str) -> list[NormalizedEvent]:

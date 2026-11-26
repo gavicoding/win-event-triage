@@ -109,6 +109,31 @@
       "title": "Potential DCSync / AD replication abuse (Event 4662)",
       "description": "Directory Service replication GUID (DS-Replication-Get-Changes) invoked by an account that does not end with a Domain Controller '$' machine suffix.",
       "remediation": "Treat as Tier-0 domain compromise risk: revoke Replicating Directory Changes permissions immediately and rotate krbtgt twice."
+    },
+    "WET019": {
+      "title": "RDP access from an internet IP (1149 / 4778)",
+      "description": "Remote Desktop authenticated or reconnected from a public IP address. Exposed RDP is one of the most common ways ransomware groups get in.",
+      "remediation": "Close RDP to the internet (use VPN or a gateway with MFA), check whether the account and IP are expected, and reset the password if not."
+    },
+    "WET020": {
+      "title": "Program set to start automatically (Run key)",
+      "description": "A value was written to a Run/RunOnce or Winlogon registry key, so the program starts every time someone signs in. Common persistence for malware.",
+      "remediation": "Check the program path and signature. If it is unknown, remove the value, isolate the machine and look for the file that created it."
+    },
+    "WET021": {
+      "title": "Ransom note or encrypted file created",
+      "description": "Sysmon saw a file named like a ransom note (HOW_TO_DECRYPT, RESTORE_FILES...) or with an extension used by ransomware families.",
+      "remediation": "Isolate the machine from the network now, do not turn it off, and start incident response. Check backups before restoring anything."
+    },
+    "WET022": {
+      "title": "Malware detected by Microsoft Defender (1116 / 1117)",
+      "description": "Defender found a threat. 1117 means it acted on it, but the same machine may have other files or persistence left behind.",
+      "remediation": "Review the threat name and path, run a full scan, and look for the same file on other machines. Find out how it got in."
+    },
+    "WET023": {
+      "title": "Security service stopped or disabled (7040 / 7036)",
+      "description": "Defender, the event log, the firewall, Sysmon or Defender for Endpoint was stopped or set to disabled. Attackers do this right before acting.",
+      "remediation": "Turn the service back on, find out which account changed it, and protect the configuration with tamper protection or group policy."
     }
   }
 }

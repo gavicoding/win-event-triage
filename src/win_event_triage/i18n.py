@@ -11,6 +11,7 @@ from typing import Any
 def _find_locales_dir() -> Path:
     here = Path(__file__).resolve()
     candidates = [
+        here.parent / "locales",
         here.parents[2] / "WinEventTriage" / "locales",
         Path.cwd() / "WinEventTriage" / "locales",
     ]

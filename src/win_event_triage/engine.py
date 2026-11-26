@@ -1,4 +1,4 @@
-"""Core read-only MITRE ATT&CK event correlation engine (WET001..WET018)."""
+"""Core read-only MITRE ATT&CK event correlation engine (WET001..WET023)."""
 
 from __future__ import annotations
 
@@ -30,6 +30,36 @@ SHADOW_WIPE_RX = re.compile(
 PS_SUSP_RX = re.compile(r"(?i)(?:-(?:enc|encodedcommand)\s+[A-Za-z0-9+/=]{12,}|FromBase64String|Invoke-Expression|\bIEX\b|DownloadString|Net\.WebClient|AmsiUtils)")
 LOLBIN_RX = re.compile(r"(?i)(?:certutil.*-urlcache|mshta(?:\.exe)?\s+https?://|bitsadmin.*/transfer|regsvr32.*/i:https?://|wmic\s+/node:)")
 DCSYNC_GUIDS = ("1131f6aa-9c07-11d1-f79f-00c04fc2dcd2", "1131f6ad-9c07-11d1-f79f-00c04fc2dcd2")
+RUN_KEY_RX = re.compile(
+    r"(?i)\\(?:Software\\(?:WOW6432Node\\)?Microsoft\\Windows\\CurrentVersion\\(?:Run|RunOnce|RunServices|Policies\\Explorer\\Run)|"
+    r"Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\(?:Userinit|Shell))\b"
+)
+RANSOM_NOTE_RX = re.compile(
+    r"(?i)(?:\\|/)(?:[^\\/]*(?:decrypt|restore|recover|ransom|how[_ -]?to|readme[_ -]?(?:now|warning|for[_ -]?decrypt))[^\\/]*\.(?:txt|html?|hta|url)|"
+    r"[^\\/]+\.(?:locked|encrypted|crypt|crypted|enc[0-9]*|lockbit|ryk|conti|akira|blackcat|phobos|8base))$"
+)
+SECURITY_SERVICES_RX = re.compile(r"(?i)\b(?:windefend|microsoft defender|windows defender|eventlog|windows event log|sense|wscsvc|security center|mpssvc|windows firewall|wdnissvc|sysmon64?)\b")
+DISABLED_RX = re.compile(r"(?i)\b(?:disabled|desativad[oa]|stopped|parad[oa]|interrompid[oa])\b")
+
+# Event IDs reused by many providers: only trust them from the right source (empty provider = JSON snapshot)
+PROVIDERS = {
+    "eventlog": ("microsoft-windows-eventlog", "eventlog"),
+    "tasks": ("microsoft-windows-taskscheduler",),
+    "defender": ("microsoft-windows-windows defender", "windows defender"),
+    "sysmon": ("microsoft-windows-sysmon",),
+    "scm": ("service control manager",),
+    "rdp": ("microsoft-windows-terminalservices-remoteconnectionmanager", "microsoft-windows-terminalservices-localsessionmanager"),
+}
+
+
+def _from(ev: NormalizedEvent, source: str) -> bool:
+    prov = (ev.provider or "").strip().lower()
+    return not prov or prov in PROVIDERS[source]
+
+
+def _process_line(ev: NormalizedEvent) -> str:
+    """Command line of a process creation (4688 or Sysmon 1)."""
+    return f"{_dget(ev, 'CommandLine', '')} {_dget(ev, 'Image', '') if not _dget(ev, 'CommandLine', '') else ''}".strip()
 
 
 def _parse_ts(ts: str) -> datetime:
@@ -38,6 +68,8 @@ def _parse_ts(ts: str) -> datetime:
     cleaned = ts.strip()
     if cleaned.endswith("Z"):
         cleaned = cleaned[:-1] + "+00:00"
+    # Windows writes 7 fractional digits; Python 3.10 only accepts up to 6
+    cleaned = re.sub(r"(\.\d{6})\d+", r"\1", cleaned)
     try:
         dt = datetime.fromisoformat(cleaned)
         if dt.tzinfo is None:
@@ -88,7 +120,7 @@ def analyze_events(
     brute_force_threshold: int = 5,
     anonymize: bool = False,
 ) -> TriageReport:
-    """Analyze normalized Windows events across all 18 MITRE-mapped triage rules."""
+    """Analyze normalized Windows events across all MITRE-mapped triage rules."""
     ordered = sorted(events, key=lambda e: _parse_ts(e.time_created))
     findings: list[Finding] = []
 
@@ -184,9 +216,54 @@ def analyze_events(
 
     for ev in ordered:
         eid = ev.event_id
-        cmd_line = _dget(ev, "CommandLine", "")
+        sysmon = (ev.provider or "").lower() == "microsoft-windows-sysmon"
+        # Sysmon 1 (process creation) is read like 4688; IDs 1/10/11/13 only count when Sysmon wrote them
+        if sysmon and eid == 1:
+            eid = 4688
+        elif eid in (1, 3, 10, 11, 13) and not sysmon:
+            eid = -eid
+        cmd_line = _process_line(ev)
         script_block = _dget(ev, "ScriptBlockText", "")
         combined = f"{cmd_line} {script_block} {ev.message}".strip()
+        user = _dget(ev, "SubjectUserName", "") or _dget(ev, "User", "unknown")
+
+        if sysmon and eid == 10:
+            target = _dget(ev, "TargetImage", "").lower()
+            source_img = _dget(ev, "SourceImage", "")
+            access = _dget(ev, "GrantedAccess", "").lower()
+            benign = re.search(r"(?i)\\(?:MsMpEng|csrss|wininit|lsm|svchost|services|wmiprvse|taskmgr|procexp64?)\.exe$", source_img)
+            if target.endswith("\\lsass.exe") and not benign and access in ("0x1010", "0x1410", "0x1438", "0x143a", "0x1fffff", "0x40"):
+                add("WET005", ev.time_created, ev.computer, user, "-", f"Process '{source_img}' opened LSASS memory (access {access}).")
+
+        if (sysmon and eid == 13) or eid == 4657:
+            key = _dget(ev, "TargetObject", "") or _dget(ev, "ObjectName", "")
+            details = _dget(ev, "Details", "") or _dget(ev, "NewValue", "")
+            if RUN_KEY_RX.search(key):
+                add("WET020", ev.time_created, ev.computer, user, "-", f"Autostart registry value set: {key} = {details[:100]}")
+
+        if sysmon and eid == 11:
+            fname = _dget(ev, "TargetFilename", "")
+            if RANSOM_NOTE_RX.search(fname):
+                add("WET021", ev.time_created, ev.computer, user, "-", f"Ransom note or encrypted file written: {fname}")
+
+        if eid in (1116, 1117) and _from(ev, "defender"):
+            threat = _dget(ev, "Threat Name", "") or _dget(ev, "ThreatName", "") or ev.message[:80]
+            path_ = _dget(ev, "Path", "")
+            action = "blocked/removed" if eid == 1117 else "detected"
+            add("WET022", ev.time_created, ev.computer, _dget(ev, "Detection User", "") or "-", "-", f"Defender {action} '{threat}' {path_[:100]}".strip())
+
+        if eid in (7040, 7036) and _from(ev, "scm"):
+            svc = _dget(ev, "param1", "") or _dget(ev, "Data_0", "") or ev.message
+            state = f"{_dget(ev, 'param2', '')} {_dget(ev, 'param3', '')} {_dget(ev, 'Data_1', '')} {ev.message}"
+            if SECURITY_SERVICES_RX.search(svc) and DISABLED_RX.search(state):
+                add("WET023", ev.time_created, ev.computer, "-", "-", f"Security service '{svc[:60]}' changed to: {state.strip()[:80]}")
+
+        if (eid == 1149 and _from(ev, "rdp")) or eid == 4778:
+            ip = _dget(ev, "Param3", "") or _dget(ev, "ClientAddress", "") or _dget(ev, "Address", "")
+            u = _dget(ev, "Param1", "") or _dget(ev, "AccountName", "") or _dget(ev, "User", "")
+            if ip and not _is_private_or_local_ip(ip):
+                what = "RDP authentication (1149)" if eid == 1149 else "RDP session reconnected (4778)"
+                add("WET019", ev.time_created, ev.computer, u, ip, f"{what} for '{u}' from internet IP {ip}.")
 
         if eid == 4769:
             enc = _dget(ev, "TicketEncryptionType", "")
@@ -212,20 +289,20 @@ def analyze_events(
             if cn_clean in created_users:
                 add("WET007", ev.time_created, ev.computer, member, "-", f"Newly created account '{member}' was elevated into '{grp}'.")
 
-        if eid in (7045, 4697):
+        if eid == 4697 or (eid == 7045 and _from(ev, "scm")):
             srv = _dget(ev, "ServiceName", "unknown")
             img = _dget(ev, "ImagePath", "")
             if SVC_SUSP_RX.search(img):
                 add("WET008", ev.time_created, ev.computer, "SYSTEM", "-", f"Suspicious service '{srv}' installed with path '{img}'.")
 
-        if eid in (4698, 4702, 106):
+        if eid in (4698, 4702) or (eid == 106 and _from(ev, "tasks")):
             tname = _dget(ev, "TaskName", "unknown")
             tcontent = _dget(ev, "TaskContent", "")
             if TASK_SUSP_RX.search(f"{tcontent} {ev.message}"):
                 subj = _dget(ev, "SubjectUserName", "unknown")
                 add("WET009", ev.time_created, ev.computer, subj, "-", f"Suspicious scheduled task '{tname}' registered.")
 
-        if eid in (1102, 104):
+        if eid in (1102, 104) and _from(ev, "eventlog"):
             subj = _dget(ev, "SubjectUserName", "unknown")
             add("WET010", ev.time_created, ev.computer, subj, "-", f"Event log cleared (EventID {eid}) by '{subj}'.")
 
@@ -233,7 +310,7 @@ def analyze_events(
             subj = _dget(ev, "SubjectUserName", "unknown")
             add("WET011", ev.time_created, ev.computer, subj, "-", f"Shadow copy/recovery sabotage command: {combined[:110]}")
 
-        if eid in (5001, 5007, 1116, 1117):
+        if eid in (5001, 5007, 5010, 5012) and _from(ev, "defender"):
             add("WET012", ev.time_created, ev.computer, "Defender", "-", f"Microsoft Defender telemetry EventID {eid}: {ev.message}")
 
         if eid == 4719:

@@ -11,25 +11,32 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  const Evtx = typeof module !== "undefined" && module.exports ? require("./evtx.js") : globalThis.WinEvtx;
+
   const RULES = {
-    WET001: { sev: "high", tactic: "Credential Access", tech: "T1110.001", en: "Brute-force or password spraying burst (4625)", pt: "Rajada de forca bruta ou password spray (4625)", rem_en: "Block source IP at perimeter firewall and enable Smart Lockout.", rem_pt: "Bloqueie o IP de origem no firewall e ative Smart Lockout." },
-    WET002: { sev: "critical", tactic: "Credential Access", tech: "T1110", en: "Brute-force burst followed by logon success (4625 -> 4624)", pt: "Forca bruta seguida de logon aceito (4625 -> 4624)", rem_en: "Assume compromise: revoke Kerberos TGTs, force password reset, verify MFA.", rem_pt: "Trate como comprometimento: derrube sessoes/TGTs, troque a senha e valide MFA." },
-    WET003: { sev: "critical", tactic: "Credential Access", tech: "T1558.003", en: "Kerberoasting RC4 ticket request (4769 0x17)", pt: "Kerberoasting com cifra RC4 fraca (4769 0x17)", rem_en: "Rotate affected service password (25+ chars / gMSA) and enforce AES Kerberos.", rem_pt: "Rotacione a senha da conta de servico para gMSA ou 25+ caracteres." },
+    WET001: { sev: "high", tactic: "Credential Access", tech: "T1110.001", en: "Brute-force or password spraying burst (4625)", pt: "Rajada de força bruta ou password spray (4625)", rem_en: "Block source IP at perimeter firewall and enable Smart Lockout.", rem_pt: "Bloqueie o IP de origem no firewall e ative Smart Lockout." },
+    WET002: { sev: "critical", tactic: "Credential Access", tech: "T1110", en: "Brute-force burst followed by logon success (4625 -> 4624)", pt: "Força bruta seguida de logon aceito (4625 -> 4624)", rem_en: "Assume compromise: revoke Kerberos TGTs, force password reset, verify MFA.", rem_pt: "Trate como comprometimento: derrube sessões/TGTs, troque a senha e valide MFA." },
+    WET003: { sev: "critical", tactic: "Credential Access", tech: "T1558.003", en: "Kerberoasting RC4 ticket request (4769 0x17)", pt: "Kerberoasting com cifra RC4 fraca (4769 0x17)", rem_en: "Rotate affected service password (25+ chars / gMSA) and enforce AES Kerberos.", rem_pt: "Rotacione a senha da conta de serviço para gMSA ou 25+ caracteres." },
     WET004: { sev: "high", tactic: "Credential Access", tech: "T1110", en: "Account lockout storm (Event 4740)", pt: "Onda de bloqueios de conta (Evento 4740)", rem_en: "Inspect Caller Computer Name in Event 4740 and isolate source machine.", rem_pt: "Verifique o Caller Computer Name no evento 4740 e isole a origem." },
-    WET005: { sev: "critical", tactic: "Credential Access", tech: "T1003.001", en: "Credential dumping / LSASS / NTDS indicator", pt: "Indicador de dump de credenciais (LSASS / NTDS)", rem_en: "Isolate endpoint immediately, enable RunAsPPL / Credential Guard, rotate krbtgt.", rem_pt: "Isole a maquina imediatamente, ative Credential Guard e rotacione krbtgt." },
-    WET006: { sev: "critical", tactic: "Persistence", tech: "T1098", en: "Privileged security group modified (4728/4732/4756)", pt: "Alteracao em grupo privilegiado (4728/4732/4756)", rem_en: "Remove unauthorized members and audit executor logon session.", rem_pt: "Remova membros nao autorizados e audite a conta executora." },
-    WET007: { sev: "high", tactic: "Persistence", tech: "T1136", en: "New account created off-hours or elevated quickly (4720)", pt: "Conta nova criada fora de hora ou elevada (4720)", rem_en: "Disable unapproved account and inspect creator session.", rem_pt: "Desative a conta nao aprovada e revise a sessao criadora." },
-    WET008: { sev: "high", tactic: "Persistence", tech: "T1543.003", en: "Suspicious Windows service installed (7045/4697)", pt: "Servico suspeito instalado no Windows (7045/4697)", rem_en: "Stop service, collect binary SHA-256 hash, quarantine host.", rem_pt: "Pare o servico, colete o hash SHA-256 do binario e isole o servidor." },
-    WET009: { sev: "high", tactic: "Persistence", tech: "T1053.005", en: "Suspicious scheduled task persistence (4698/4702/106)", pt: "Persistencia via Tarefa Agendada suspeita (4698)", rem_en: "Export task XML definition and delete unauthorized persistence triggers.", rem_pt: "Exporte o XML da tarefa e exclua triggers nao autorizados." },
+    WET005: { sev: "critical", tactic: "Credential Access", tech: "T1003.001", en: "Credential dumping / LSASS / NTDS indicator", pt: "Indicador de dump de credenciais (LSASS / NTDS)", rem_en: "Isolate endpoint immediately, enable RunAsPPL / Credential Guard, rotate krbtgt.", rem_pt: "Isole a máquina imediatamente, ative Credential Guard e rotacione krbtgt." },
+    WET006: { sev: "critical", tactic: "Persistence", tech: "T1098", en: "Privileged security group modified (4728/4732/4756)", pt: "Alteração em grupo privilegiado (4728/4732/4756)", rem_en: "Remove unauthorized members and audit executor logon session.", rem_pt: "Remova membros não autorizados e audite a conta executora." },
+    WET007: { sev: "high", tactic: "Persistence", tech: "T1136", en: "New account created off-hours or elevated quickly (4720)", pt: "Conta nova criada fora de hora ou elevada (4720)", rem_en: "Disable unapproved account and inspect creator session.", rem_pt: "Desative a conta não aprovada e revise a sessão criadora." },
+    WET008: { sev: "high", tactic: "Persistence", tech: "T1543.003", en: "Suspicious Windows service installed (7045/4697)", pt: "Serviço suspeito instalado no Windows (7045/4697)", rem_en: "Stop service, collect binary SHA-256 hash, quarantine host.", rem_pt: "Pare o serviço, colete o hash SHA-256 do binário e isole o servidor." },
+    WET009: { sev: "high", tactic: "Persistence", tech: "T1053.005", en: "Suspicious scheduled task persistence (4698/4702/106)", pt: "Persistência via Tarefa Agendada suspeita (4698)", rem_en: "Export task XML definition and delete unauthorized persistence triggers.", rem_pt: "Exporte o XML da tarefa e exclua triggers não autorizados." },
     WET010: { sev: "critical", tactic: "Defense Evasion", tech: "T1070.001", en: "Windows audit log cleared (1102/104)", pt: "Log de auditoria apagado (1102/104)", rem_en: "Investigate Event 1102 subject and ship logs to external SIEM.", rem_pt: "Investigue o autor no evento 1102 e envie logs para SIEM externo." },
-    WET011: { sev: "critical", tactic: "Impact", tech: "T1490", en: "Shadow copy deletion / recovery sabotage", pt: "Exclusao de Shadow Copies / sabotagem de recuperacao", rem_en: "Disconnect host from SMB/AD immediately and verify offline backups.", rem_pt: "Desconecte o host da rede SMB/AD e valide backups offline." },
-    WET012: { sev: "critical", tactic: "Defense Evasion", tech: "T1562.001", en: "Microsoft Defender disabled or malware alert", pt: "Microsoft Defender desativado ou alerta de malware", rem_en: "Re-enable Tamper Protection via GPO/MDM and quarantine host.", rem_pt: "Reative Tamper Protection via GPO/MDM e isole o endpoint." },
-    WET013: { sev: "high", tactic: "Defense Evasion", tech: "T1562.002", en: "Windows audit policy modified (4719)", pt: "Politica de auditoria modificada (4719)", rem_en: "Restore baseline GPO audit policy settings.", rem_pt: "Reaplique a GPO padrao de Auditoria Avancada." },
-    WET014: { sev: "critical", tactic: "Execution", tech: "T1059.001", en: "Obfuscated / download-cradle PowerShell (4104/4688)", pt: "PowerShell ofuscado ou com download remoto", rem_en: "Decode Base64 script block and block outbound C2 destinations.", rem_pt: "Decodifique o bloco Base64 e bloqueie dominios C2." },
-    WET015: { sev: "high", tactic: "Lateral Movement", tech: "T1021.001", en: "External RDP or explicit-credential lateral movement", pt: "Movimentacao lateral via RDP externo ou runas", rem_en: "Terminate session and restrict RDP behind NLA + MFA + bastion.", rem_pt: "Encerre a sessao e restrinja RDP atras de VPN/MFA." },
-    WET016: { sev: "high", tactic: "Defense Evasion", tech: "T1218", en: "Living-off-the-Land binary (LOLBin) abuse", pt: "Abuso de binario nativo LOLBin (certutil/mshta)", rem_en: "Quarantine staged payload and enforce AppLocker/WDAC rules.", rem_pt: "Coloque o payload em quarentena e aplique regras WDAC." },
-    WET017: { sev: "medium", tactic: "Initial Access", tech: "T1078", en: "Off-hours privileged logon (4672)", pt: "Logon administrativo fora do expediente (4672)", rem_en: "Confirm maintenance ticket; otherwise verify admin credentials.", rem_pt: "Confirme janela de manutencao aprovada ou audite a sessao." },
-    WET018: { sev: "critical", tactic: "Credential Access", tech: "T1003.006", en: "Potential DCSync replication abuse (4662)", pt: "Possivel ataque DCSync / replicacao AD indevida (4662)", rem_en: "Tier-0 alert: revoke replication permissions and double-rotate krbtgt.", rem_pt: "Alerta Tier-0: revogue replicacao indevida e rotacione krbtgt duas vezes." }
+    WET011: { sev: "critical", tactic: "Impact", tech: "T1490", en: "Shadow copy deletion / recovery sabotage", pt: "Exclusão de Shadow Copies / sabotagem de recuperação", rem_en: "Disconnect host from SMB/AD immediately and verify offline backups.", rem_pt: "Desconecte o host da rede SMB/AD e valide backups offline." },
+    WET012: { sev: "critical", tactic: "Defense Evasion", tech: "T1562.001", en: "Microsoft Defender protection turned off (5001/5007)", pt: "Proteção do Microsoft Defender desligada (5001/5007)", rem_en: "Re-enable Tamper Protection via GPO/MDM and quarantine host.", rem_pt: "Reative Tamper Protection via GPO/MDM e isole o endpoint." },
+    WET013: { sev: "high", tactic: "Defense Evasion", tech: "T1562.002", en: "Windows audit policy modified (4719)", pt: "Política de auditoria modificada (4719)", rem_en: "Restore baseline GPO audit policy settings.", rem_pt: "Reaplique a GPO padrão de Auditoria Avançada." },
+    WET014: { sev: "critical", tactic: "Execution", tech: "T1059.001", en: "Obfuscated / download-cradle PowerShell (4104/4688)", pt: "PowerShell ofuscado ou com download remoto", rem_en: "Decode Base64 script block and block outbound C2 destinations.", rem_pt: "Decodifique o bloco Base64 e bloqueie domínios C2." },
+    WET015: { sev: "high", tactic: "Lateral Movement", tech: "T1021.001", en: "External RDP or explicit-credential lateral movement", pt: "Movimentação lateral via RDP externo ou runas", rem_en: "Terminate session and restrict RDP behind NLA + MFA + bastion.", rem_pt: "Encerre a sessão e restrinja RDP atras de VPN/MFA." },
+    WET016: { sev: "high", tactic: "Defense Evasion", tech: "T1218", en: "Living-off-the-Land binary (LOLBin) abuse", pt: "Abuso de binário nativo LOLBin (certutil/mshta)", rem_en: "Quarantine staged payload and enforce AppLocker/WDAC rules.", rem_pt: "Coloque o payload em quarentena e aplique regras WDAC." },
+    WET017: { sev: "medium", tactic: "Initial Access", tech: "T1078", en: "Off-hours privileged logon (4672)", pt: "Logon administrativo fora do expediente (4672)", rem_en: "Confirm maintenance ticket; otherwise verify admin credentials.", rem_pt: "Confirme janela de manutenção aprovada ou audite a sessão." },
+    WET019: { sev: "high", tactic: "Lateral Movement", tech: "T1021.001", en: "RDP access from an internet IP (1149/4778)", pt: "Acesso RDP vindo de IP da internet (1149/4778)", rem_en: "Close RDP to the internet (VPN or gateway with MFA) and reset the password if the access was not expected.", rem_pt: "Feche o RDP para a internet (VPN ou gateway com MFA) e troque a senha se o acesso não era esperado." },
+    WET020: { sev: "high", tactic: "Persistence", tech: "T1547.001", en: "Program set to start automatically (Run key)", pt: "Programa configurado para iniciar sozinho (chave Run)", rem_en: "Check path and signature; if unknown, remove the value and isolate the machine.", rem_pt: "Confira caminho e assinatura; se for desconhecido, remova o valor e isole a máquina." },
+    WET021: { sev: "critical", tactic: "Impact", tech: "T1486", en: "Ransom note or encrypted file created", pt: "Nota de resgate ou arquivo criptografado criado", rem_en: "Isolate the machine now, do not turn it off, and start incident response.", rem_pt: "Isole a máquina agora, não desligue o computador e inicie a resposta a incidente." },
+    WET022: { sev: "high", tactic: "Execution", tech: "T1204.002", en: "Malware detected by Microsoft Defender (1116/1117)", pt: "Malware detectado pelo Microsoft Defender (1116/1117)", rem_en: "Run a full scan, look for the same file on other machines and find how it got in.", rem_pt: "Rode uma verificação completa, procure o mesmo arquivo em outras máquinas e descubra por onde entrou." },
+    WET023: { sev: "high", tactic: "Defense Evasion", tech: "T1562.001", en: "Security service stopped or disabled (7040/7036)", pt: "Serviço de segurança parado ou desativado (7040/7036)", rem_en: "Turn the service back on and find which account changed it.", rem_pt: "Ligue o serviço de novo e descubra qual conta fez a mudança." },
+    WET018: { sev: "critical", tactic: "Credential Access", tech: "T1003.006", en: "Potential DCSync replication abuse (4662)", pt: "Possível ataque DCSync / replicação AD indevida (4662)", rem_en: "Tier-0 alert: revoke replication permissions and double-rotate krbtgt.", rem_pt: "Alerta Tier-0: revogue replicação indevida e rotacione krbtgt duas vezes." }
   };
 
   const SEV_WEIGHT = { critical: 25, high: 14, medium: 6, low: 2 };
@@ -38,12 +45,12 @@
   const I18N = {
     en: {
       hero_sub: "Read-only Windows Security, System, PowerShell & Defender event triage mapped to MITRE ATT&CK.",
-      privacy_banner: "Zero upload: Event Viewer XML and JSON log snapshots are analyzed strictly inside your browser tab.",
+      privacy_banner: "Zero upload: .evtx logs, Event Viewer XML and JSON snapshots are read strictly inside your browser tab.",
       presets_label: "Load scenario:",
       preset_ransom: "Ransomware Intrusion Chain",
       preset_insider: "Insider & DCSync Escalation",
       preset_clean: "Clean AD Baseline",
-      btn_upload: "Upload JSON / Event Viewer XML",
+      btn_upload: "Open .evtx, JSON or XML (or drop files here)",
       btn_theme: "Theme",
       kpi_risk: "Incident Risk Score",
       kpi_events: "Events Analyzed",
@@ -57,30 +64,36 @@
       filter_all: "All",
       mitre_heading: "Triggered MITRE ATT&CK Tactics & Techniques",
       playbook_heading: "Prioritized First-Responder Containment Steps",
-      clean_msg: "Clean baseline: zero suspicious Windows event indicators detected."
+      clean_msg: "Clean baseline: zero suspicious Windows event indicators detected.",
+      loading: "Reading logs in your browser...",
+      load_error: "Could not read this file:",
+      btn_sample_evtx: "Open sample .evtx"
     },
     pt: {
       hero_sub: "Triagem somente leitura de logs Windows Security, System, PowerShell e Defender mapeada ao MITRE ATT&CK.",
-      privacy_banner: "Zero envio externo: snapshots JSON e XML do Visualizador de Eventos sao analisados apenas nesta aba.",
-      presets_label: "Carregar cenario:",
+      privacy_banner: "Nada é enviado: logs .evtx, XML do Visualizador de Eventos e snapshots JSON são lidos só nesta aba.",
+      presets_label: "Carregar cenário:",
       preset_ransom: "Cadeia de Ransomware",
-      preset_insider: "Escalacao Interna & DCSync",
+      preset_insider: "Escalação Interna & DCSync",
       preset_clean: "Baseline Limpo de AD",
-      btn_upload: "Carregar JSON / XML de Eventos",
+      btn_upload: "Abrir .evtx, JSON ou XML (ou arraste os arquivos aqui)",
       btn_theme: "Tema",
       kpi_risk: "Risco do Incidente",
       kpi_events: "Eventos Analisados",
-      sev_critical: "Critico",
+      sev_critical: "Crítico",
       sev_high: "Alto",
-      sev_medium: "Medio",
+      sev_medium: "Médio",
       tab_findings: "Alertas e Linha do Tempo",
       tab_mitre: "Cobertura MITRE ATT&CK",
-      tab_playbook: "Playbook de Contencao",
+      tab_playbook: "Playbook de Contenção",
       findings_heading: "Indicadores Detectados",
       filter_all: "Todos",
-      mitre_heading: "Taticas e Tecnicas MITRE ATT&CK Acionadas",
-      playbook_heading: "Ordem Prioritaria de Contencao",
-      clean_msg: "Baseline limpo: nenhum indicador suspeito detectado nos logs."
+      mitre_heading: "Táticas e Técnicas MITRE ATT&CK Acionadas",
+      playbook_heading: "Ordem Prioritária de Contenção",
+      clean_msg: "Baseline limpo: nenhum indicador suspeito detectado nos logs.",
+      loading: "Lendo os logs no seu navegador...",
+      load_error: "Não foi possível ler este arquivo:",
+      btn_sample_evtx: "Abrir .evtx de exemplo"
     }
   };
 
@@ -130,6 +143,18 @@
     }
   };
 
+  const PROVIDERS = {
+    eventlog: ["microsoft-windows-eventlog", "eventlog"],
+    tasks: ["microsoft-windows-taskscheduler"],
+    defender: ["microsoft-windows-windows defender", "windows defender"],
+    scm: ["service control manager"],
+    rdp: ["microsoft-windows-terminalservices-remoteconnectionmanager", "microsoft-windows-terminalservices-localsessionmanager"]
+  };
+  const RUN_KEY_RX = /\\(?:Software\\(?:WOW6432Node\\)?Microsoft\\Windows\\CurrentVersion\\(?:Run|RunOnce|RunServices|Policies\\Explorer\\Run)|Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\(?:Userinit|Shell))\b/i;
+  const RANSOM_NOTE_RX = /(?:\\|\/)(?:[^\\/]*(?:decrypt|restore|recover|ransom|how[_ -]?to|readme[_ -]?(?:now|warning|for[_ -]?decrypt))[^\\/]*\.(?:txt|html?|hta|url)|[^\\/]+\.(?:locked|encrypted|crypt|crypted|enc[0-9]*|lockbit|ryk|conti|akira|blackcat|phobos|8base))$/i;
+  const SECURITY_SERVICES_RX = /\b(?:windefend|microsoft defender|windows defender|eventlog|windows event log|sense|wscsvc|security center|mpssvc|windows firewall|wdnissvc|sysmon64?)\b/i;
+  const DISABLED_RX = /\b(?:disabled|desativad[oa]|stopped|parad[oa]|interrompid[oa])\b/i;
+
   function isPrivateIp(ip) {
     const s = String(ip || "").trim();
     if (!s || s === "-" || s === "127.0.0.1" || s === "::1" || s === "localhost") return true;
@@ -146,6 +171,8 @@
       const eidMatch = /<EventID[^>]*>(\d+)<\/EventID>/i.exec(body);
       const timeMatch = /<TimeCreated[^>]*SystemTime=["']([^"']+)["']/i.exec(body);
       const compMatch = /<Computer[^>]*>([^<]+)<\/Computer>/i.exec(body);
+      const provMatch = /<Provider[^>]*Name=["']([^"']+)["']/i.exec(body);
+      const chanMatch = /<Channel[^>]*>([^<]+)<\/Channel>/i.exec(body);
       const data = {};
       const dataRx = /<Data\s+Name=["']([^"']+)["'][^>]*>([\s\S]*?)<\/Data>/gi;
       let dm;
@@ -156,6 +183,8 @@
         EventId: eidMatch ? Number(eidMatch[1]) : 0,
         TimeCreated: timeMatch ? timeMatch[1] : "",
         Computer: compMatch ? compMatch[1] : "unknown-host",
+        Provider: provMatch ? provMatch[1] : "",
+        LogName: chanMatch ? chanMatch[1] : "",
         Message: "",
         Data: data
       });
@@ -214,9 +243,46 @@
     const privGroups = new Set(["domain admins", "enterprise admins", "schema admins", "administrators", "backup operators", "remote desktop users"]);
 
     ordered.forEach((ev) => {
-      const eid = Number(ev.EventId);
+      const prov = String(ev.Provider || "").toLowerCase();
+      const sysmon = prov === "microsoft-windows-sysmon";
+      let eid = Number(ev.EventId);
+      // Sysmon 1 = process creation (like 4688); IDs 1/3/10/11/13 only count when Sysmon wrote them
+      if (sysmon && eid === 1) eid = 4688;
+      else if ([1, 3, 10, 11, 13].includes(eid) && !sysmon) eid = -eid;
+      const from = (src) => !prov || PROVIDERS[src].includes(prov);
       const d = ev.Data || {};
-      const cmd = `${d.CommandLine || ""} ${d.ScriptBlockText || ""} ${ev.Message || ""}`.trim();
+      const cmd = `${d.CommandLine || (d.Image || "")} ${d.ScriptBlockText || ""} ${ev.Message || ""}`.trim();
+      const who = d.SubjectUserName || d.User || "unknown";
+      if (sysmon && eid === 10) {
+        const target = String(d.TargetImage || "").toLowerCase();
+        const src = String(d.SourceImage || "");
+        const access = String(d.GrantedAccess || "").toLowerCase();
+        const benign = /\\(MsMpEng|csrss|wininit|lsm|svchost|services|wmiprvse|taskmgr|procexp64?)\.exe$/i.test(src);
+        if (target.endsWith("\\lsass.exe") && !benign && ["0x1010", "0x1410", "0x1438", "0x143a", "0x1fffff", "0x40"].includes(access)) {
+          add("WET005", ev.TimeCreated, ev.Computer, who, "-", `Process '${src}' opened LSASS memory (access ${access}).`);
+        }
+      }
+      if ((sysmon && eid === 13) || eid === 4657) {
+        const key = d.TargetObject || d.ObjectName || "";
+        if (RUN_KEY_RX.test(key)) add("WET020", ev.TimeCreated, ev.Computer, who, "-", `Autostart registry value set: ${key} = ${String(d.Details || d.NewValue || "").slice(0, 100)}`);
+      }
+      if (sysmon && eid === 11 && RANSOM_NOTE_RX.test(String(d.TargetFilename || ""))) {
+        add("WET021", ev.TimeCreated, ev.Computer, who, "-", `Ransom note or encrypted file written: ${d.TargetFilename}`);
+      }
+      if ((eid === 1116 || eid === 1117) && from("defender")) {
+        const threat = d["Threat Name"] || d.ThreatName || String(ev.Message || "").slice(0, 80);
+        add("WET022", ev.TimeCreated, ev.Computer, d["Detection User"] || "-", "-", `Defender ${eid === 1117 ? "blocked/removed" : "detected"} '${threat}' ${String(d.Path || "").slice(0, 100)}`.trim());
+      }
+      if ((eid === 7040 || eid === 7036) && from("scm")) {
+        const svc = String(d.param1 || d.Data_0 || ev.Message || "");
+        const state = `${d.param2 || ""} ${d.param3 || ""} ${d.Data_1 || ""} ${ev.Message || ""}`;
+        if (SECURITY_SERVICES_RX.test(svc) && DISABLED_RX.test(state)) add("WET023", ev.TimeCreated, ev.Computer, "-", "-", `Security service '${svc.slice(0, 60)}' changed to: ${state.trim().slice(0, 80)}`);
+      }
+      if ((eid === 1149 && from("rdp")) || eid === 4778) {
+        const ip = d.Param3 || d.ClientAddress || d.Address || "";
+        const u = d.Param1 || d.AccountName || d.User || "";
+        if (ip && !isPrivateIp(ip)) add("WET019", ev.TimeCreated, ev.Computer, u, ip, `${eid === 1149 ? "RDP authentication (1149)" : "RDP session reconnected (4778)"} for '${u}' from internet IP ${ip}.`);
+      }
       const dt = new Date(ev.TimeCreated || 0);
       const hour = dt.getUTCHours();
 
@@ -237,17 +303,17 @@
         const cn = mem.replace(/^CN=([^,]+),.*$/i, "$1").toLowerCase();
         if (created.has(cn)) add("WET007", ev.TimeCreated, ev.Computer, mem, "-", `Newly created '${mem}' elevated into '${grp}'.`);
       }
-      if ([7045, 4697].includes(eid) && /(\\Temp\\|\\AppData\\|\\Users\\Public\\|\\ProgramData\\|cmd\.exe\s+\/c|powershell.*-enc|PSEXESVC)/i.test(d.ImagePath || "")) {
+      if ((eid === 4697 || (eid === 7045 && from("scm"))) && /(\\Temp\\|\\AppData\\|\\Users\\Public\\|\\ProgramData\\|cmd\.exe\s+\/c|powershell.*-enc|PSEXESVC)/i.test(d.ImagePath || "")) {
         add("WET008", ev.TimeCreated, ev.Computer, "SYSTEM", "-", `Suspicious service '${d.ServiceName}' installed: ${d.ImagePath}`);
       }
-      if ([4698, 4702, 106].includes(eid) && /(\\Temp\\|\\AppData\\|\\ProgramData\\|-enc|EncodedCommand|powershell|mshta|certutil)/i.test(`${d.TaskContent || ""} ${ev.Message || ""}`)) {
+      if ((eid === 4698 || eid === 4702 || (eid === 106 && from("tasks"))) && /(\\Temp\\|\\AppData\\|\\ProgramData\\|-enc|EncodedCommand|powershell|mshta|certutil)/i.test(`${d.TaskContent || ""} ${ev.Message || ""}`)) {
         add("WET009", ev.TimeCreated, ev.Computer, d.SubjectUserName || "unknown", "-", `Suspicious scheduled task '${d.TaskName || "unknown"}'.`);
       }
-      if ([1102, 104].includes(eid)) add("WET010", ev.TimeCreated, ev.Computer, d.SubjectUserName || "unknown", "-", `Event log cleared (EventID ${eid}) by '${d.SubjectUserName || "unknown"}'.`);
+      if ([1102, 104].includes(eid) && from("eventlog")) add("WET010", ev.TimeCreated, ev.Computer, d.SubjectUserName || "unknown", "-", `Event log cleared (EventID ${eid}) by '${d.SubjectUserName || "unknown"}'.`);
       if ([4688, 4104].includes(eid) && /(vssadmin(?:\.exe)?\s+delete\s+shadows|wmic(?:\.exe)?\s+shadowcopy\s+delete|wbadmin(?:\.exe)?\s+delete|bcdedit.*recoveryenabled\s+no)/i.test(cmd)) {
         add("WET011", ev.TimeCreated, ev.Computer, d.SubjectUserName || "SYSTEM", "-", `Shadow copy/recovery sabotage: ${cmd.slice(0, 110)}`);
       }
-      if ([5001, 5007, 1116, 1117].includes(eid)) add("WET012", ev.TimeCreated, ev.Computer, "Defender", "-", `Defender alert/tamper EventID ${eid}: ${ev.Message || ""}`);
+      if ([5001, 5007, 5010, 5012].includes(eid) && from("defender")) add("WET012", ev.TimeCreated, ev.Computer, "Defender", "-", `Defender protection changed (EventID ${eid}): ${ev.Message || ""}`);
       if (eid === 4719) add("WET013", ev.TimeCreated, ev.Computer, d.SubjectUserName || "unknown", "-", `Audit policy modified by '${d.SubjectUserName || "unknown"}'.`);
       if ([4104, 4688].includes(eid) && /(-(enc|encodedcommand)\s+[A-Za-z0-9+/=]{12,}|FromBase64String|Invoke-Expression|\bIEX\b|DownloadString|Net\.WebClient|AmsiUtils)/i.test(cmd)) {
         add("WET014", ev.TimeCreated, ev.Computer, d.SubjectUserName || "unknown", "-", `Suspicious PowerShell: ${cmd.slice(0, 110)}`);
@@ -373,24 +439,47 @@
         });
       });
 
-      el("file-input").addEventListener("change", (ev) => {
-        const f = ev.target.files && ev.target.files[0];
-        if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-          const text = String(r.result || "");
+      const loadFiles = async (files) => {
+        const list = Array.from(files || []);
+        if (!list.length) return;
+        el("load-status").textContent = I18N[lang].loading;
+        try {
           let events = [];
-          if (f.name.toLowerCase().endsWith(".xml") || text.trim().startsWith("<")) {
-            events = parseXmlEventsString(text);
-          } else {
-            const parsed = JSON.parse(text);
-            events = Array.isArray(parsed) ? parsed : (parsed.events || []);
+          for (const f of list) {
+            const name = f.name.toLowerCase();
+            if (name.endsWith(".evtx")) {
+              events = events.concat(Evtx.readEvtx(await f.arrayBuffer()));
+            } else {
+              const text = await f.text();
+              if (name.endsWith(".xml") || text.trim().startsWith("<")) {
+                events = events.concat(parseXmlEventsString(text));
+              } else {
+                const parsed = JSON.parse(text.replace(/^\uFEFF/, ""));
+                events = events.concat(Array.isArray(parsed) ? parsed : (parsed.events || []));
+              }
+            }
           }
-          report = analyzeEvents(events, f.name);
+          report = analyzeEvents(events, list.map((f) => f.name).join(", "));
+          el("load-status").textContent = "";
           renderAll();
-        };
-        r.readAsText(f);
-      });
+        } catch (err) {
+          el("load-status").textContent = `${I18N[lang].load_error} ${err && err.message ? err.message : err}`;
+        }
+      };
+      el("file-input").addEventListener("change", (ev) => loadFiles(ev.target.files));
+      const drop = document.body;
+      drop.addEventListener("dragover", (ev) => { ev.preventDefault(); drop.classList.add("dragging"); });
+      drop.addEventListener("dragleave", () => drop.classList.remove("dragging"));
+      drop.addEventListener("drop", (ev) => { ev.preventDefault(); drop.classList.remove("dragging"); loadFiles(ev.dataTransfer && ev.dataTransfer.files); });
+      const sampleBtn = el("btn-sample-evtx");
+      if (sampleBtn) {
+        sampleBtn.addEventListener("click", async () => {
+          const res = await fetch("samples/ransomware-intrusion.evtx");
+          const buf = await res.arrayBuffer();
+          report = analyzeEvents(Evtx.readEvtx(buf), "ransomware-intrusion.evtx");
+          renderAll();
+        });
+      }
 
       el("btn-export-json").addEventListener("click", () => download("triage-report.json", "application/json", JSON.stringify(report, null, 2)));
       el("btn-export-csv").addEventListener("click", () => {
@@ -417,5 +506,5 @@
     }
   }
 
-  return { RULES, PRESETS, analyzeEvents, parseXmlEventsString };
+  return { RULES, PRESETS, analyzeEvents, parseXmlEventsString, readEvtx: (buf) => Evtx.readEvtx(buf) };
 });

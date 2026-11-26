@@ -14,13 +14,18 @@ $script:RuleCatalog = @(
     [pscustomobject]@{ RuleId = 'WET009'; Severity = 'High';     Tactic = 'Persistence';          Technique = 'T1053.005'; EventIds = @(4698, 4702, 106) }
     [pscustomobject]@{ RuleId = 'WET010'; Severity = 'Critical'; Tactic = 'Defense Evasion';      Technique = 'T1070.001'; EventIds = @(1102, 104) }
     [pscustomobject]@{ RuleId = 'WET011'; Severity = 'Critical'; Tactic = 'Impact';               Technique = 'T1490';     EventIds = @(4688, 4104) }
-    [pscustomobject]@{ RuleId = 'WET012'; Severity = 'Critical'; Tactic = 'Defense Evasion';      Technique = 'T1562.001'; EventIds = @(5001, 5007, 1116, 1117) }
+    [pscustomobject]@{ RuleId = 'WET012'; Severity = 'Critical'; Tactic = 'Defense Evasion';      Technique = 'T1562.001'; EventIds = @(5001, 5007, 5010, 5012) }
     [pscustomobject]@{ RuleId = 'WET013'; Severity = 'High';     Tactic = 'Defense Evasion';      Technique = 'T1562.002'; EventIds = @(4719) }
     [pscustomobject]@{ RuleId = 'WET014'; Severity = 'Critical'; Tactic = 'Execution';            Technique = 'T1059.001'; EventIds = @(4104, 4688) }
     [pscustomobject]@{ RuleId = 'WET015'; Severity = 'High';     Tactic = 'Lateral Movement';     Technique = 'T1021.001'; EventIds = @(4624, 4648) }
     [pscustomobject]@{ RuleId = 'WET016'; Severity = 'High';     Tactic = 'Defense Evasion';      Technique = 'T1218';     EventIds = @(4688) }
     [pscustomobject]@{ RuleId = 'WET017'; Severity = 'Medium';   Tactic = 'Initial Access';       Technique = 'T1078';     EventIds = @(4672, 4624) }
     [pscustomobject]@{ RuleId = 'WET018'; Severity = 'Critical'; Tactic = 'Credential Access';    Technique = 'T1003.006'; EventIds = @(4662) }
+    [pscustomobject]@{ RuleId = 'WET019'; Severity = 'High'; Tactic = 'Lateral Movement'; Technique = 'T1021.001'; EventIds = @(1149, 4778) }
+    [pscustomobject]@{ RuleId = 'WET020'; Severity = 'High'; Tactic = 'Persistence'; Technique = 'T1547.001'; EventIds = @(13, 4657) }
+    [pscustomobject]@{ RuleId = 'WET021'; Severity = 'Critical'; Tactic = 'Impact'; Technique = 'T1486'; EventIds = @(11) }
+    [pscustomobject]@{ RuleId = 'WET022'; Severity = 'High'; Tactic = 'Execution'; Technique = 'T1204.002'; EventIds = @(1116, 1117) }
+    [pscustomobject]@{ RuleId = 'WET023'; Severity = 'High'; Tactic = 'Defense Evasion'; Technique = 'T1562.001'; EventIds = @(7040, 7036) }
 )
 
 function Get-WETLocale {
@@ -78,12 +83,18 @@ function ConvertFrom-WETXmlEvent {
         if ($null -ne $sys.TimeCreated) {
             $timeCreated = [string]$sys.TimeCreated.GetAttribute('SystemTime')
         }
-        $dataBag = @{}
-        if ($null -ne $node.EventData) {
-            foreach ($d in $node.EventData.Data) {
-                $k = [string]$d.GetAttribute('Name')
-                if ($k) { $dataBag[$k] = [string]$d.InnerText }
-            }
+        # EventData/Data (named or not, like the Python reader) and UserData leaf values;
+        # SelectNodes avoids StrictMode errors when a block is empty or missing
+        $dataBag = [ordered]@{}
+        $unnamed = 0
+        foreach ($d in @($node.SelectNodes("./*[local-name()='EventData']/*[local-name()='Data']"))) {
+            $k = [string]$d.GetAttribute('Name')
+            if (-not $k) { $k = 'Data_{0}' -f $unnamed; $unnamed++ }
+            $dataBag[$k] = [string]$d.InnerText
+        }
+        foreach ($leaf in @($node.SelectNodes("./*[local-name()='UserData']//*[not(*)]"))) {
+            $k = [string]$leaf.LocalName
+            if (-not $dataBag.Contains($k)) { $dataBag[$k] = [string]$leaf.InnerText }
         }
         $eventsList.Add([pscustomobject]@{
             EventId    = $evId
@@ -102,7 +113,7 @@ function ConvertFrom-WETWinEventRecord {
     param([Parameter(Mandatory = $true)]$Record)
 
     $xmlDoc = [xml]$Record.ToXml()
-    $parsed = ConvertFrom-WETXmlEvent -Doc $xmlDoc
+    $parsed = @(ConvertFrom-WETXmlEvent -Doc $xmlDoc)
     if ($parsed.Count -gt 0) {
         $item = $parsed[0]
         $item | Add-Member -MemberType NoteProperty -Name 'Message' -Value ([string]$Record.Message) -Force
@@ -328,6 +339,7 @@ function Invoke-WinEventTriage {
             TimeCreated = $tsStr
             ParsedTime  = $dt.ToUniversalTime()
             Computer    = [string](Get-WETField -Object $ev -Name 'Computer' -Default 'unknown-host')
+            Provider    = [string](Get-WETField -Object $ev -Name 'Provider' -Default '')
             Message     = [string](Get-WETField -Object $ev -Name 'Message' -Default '')
             Data        = $dataObj
         })
@@ -425,10 +437,81 @@ function Invoke-WinEventTriage {
         & $addFinding 'WET004' $lockoutEvents[$lockoutEvents.Count - 1].TimeCreated $lockoutEvents[0].Computer ($lockedNames -join ',') '-' ("{0} account lockouts (4740) detected: {1}" -f $lockoutEvents.Count, ($lockedNames -join ', '))
     }
 
+    $providers = @{
+        eventlog = @('microsoft-windows-eventlog', 'eventlog')
+        tasks    = @('microsoft-windows-taskscheduler')
+        defender = @('microsoft-windows-windows defender', 'windows defender')
+        scm      = @('service control manager')
+        rdp      = @('microsoft-windows-terminalservices-remoteconnectionmanager', 'microsoft-windows-terminalservices-localsessionmanager')
+    }
+    $runKeyRx = '(?i)\\(?:Software\\(?:WOW6432Node\\)?Microsoft\\Windows\\CurrentVersion\\(?:Run|RunOnce|RunServices|Policies\\Explorer\\Run)|Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\(?:Userinit|Shell))\b'
+    $ransomRx = '(?i)(?:\\|/)(?:[^\\/]*(?:decrypt|restore|recover|ransom|how[_ -]?to|readme[_ -]?(?:now|warning|for[_ -]?decrypt))[^\\/]*\.(?:txt|html?|hta|url)|[^\\/]+\.(?:locked|encrypted|crypt|crypted|enc[0-9]*|lockbit|ryk|conti|akira|blackcat|phobos|8base))$'
+    $secSvcRx = '(?i)\b(?:windefend|microsoft defender|windows defender|eventlog|windows event log|sense|wscsvc|security center|mpssvc|windows firewall|wdnissvc|sysmon64?)\b'
+    $disabledRx = '(?i)\b(?:disabled|desativad[oa]|stopped|parad[oa]|interrompid[oa])\b'
+
     foreach ($ev in $sortedEvents) {
         $eid = $ev.EventId
         $msg = $ev.Message
+        $prov = ([string]$ev.Provider).ToLowerInvariant()
+        $sysmon = $prov -eq 'microsoft-windows-sysmon'
+        $fromSrc = { param($src) (-not $prov) -or ($providers[$src] -contains $prov) }
+        # Sysmon 1 = process creation (like 4688); IDs 1/3/10/11/13 only count when Sysmon wrote them
+        if ($sysmon -and $eid -eq 1) { $eid = 4688 }
+        elseif ((@(1, 3, 10, 11, 13) -contains $eid) -and -not $sysmon) { $eid = -1 * $eid }
+        $who = [string](Get-WETField -Object $ev.Data -Name 'SubjectUserName' -Default '')
+        if (-not $who) { $who = [string](Get-WETField -Object $ev.Data -Name 'User' -Default 'unknown') }
+
+        if ($sysmon -and $eid -eq 10) {
+            $target = ([string](Get-WETField -Object $ev.Data -Name 'TargetImage' -Default '')).ToLowerInvariant()
+            $srcImg = [string](Get-WETField -Object $ev.Data -Name 'SourceImage' -Default '')
+            $access = ([string](Get-WETField -Object $ev.Data -Name 'GrantedAccess' -Default '')).ToLowerInvariant()
+            $benign = $srcImg -match '(?i)\\(?:MsMpEng|csrss|wininit|lsm|svchost|services|wmiprvse|taskmgr|procexp64?)\.exe$'
+            if ($target.EndsWith('\lsass.exe') -and -not $benign -and (@('0x1010', '0x1410', '0x1438', '0x143a', '0x1fffff', '0x40') -contains $access)) {
+                & $addFinding 'WET005' $ev.TimeCreated $ev.Computer $who '-' ("Process '{0}' opened LSASS memory (access {1})." -f $srcImg, $access)
+            }
+        }
+        if (($sysmon -and $eid -eq 13) -or $eid -eq 4657) {
+            $key = [string](Get-WETField -Object $ev.Data -Name 'TargetObject' -Default '')
+            if (-not $key) { $key = [string](Get-WETField -Object $ev.Data -Name 'ObjectName' -Default '') }
+            $details = [string](Get-WETField -Object $ev.Data -Name 'Details' -Default '')
+            if ($key -match $runKeyRx) {
+                & $addFinding 'WET020' $ev.TimeCreated $ev.Computer $who '-' ("Autostart registry value set: {0} = {1}" -f $key, $details.Substring(0, [Math]::Min(100, $details.Length)))
+            }
+        }
+        if ($sysmon -and $eid -eq 11) {
+            $fname = [string](Get-WETField -Object $ev.Data -Name 'TargetFilename' -Default '')
+            if ($fname -match $ransomRx) {
+                & $addFinding 'WET021' $ev.TimeCreated $ev.Computer $who '-' ("Ransom note or encrypted file written: {0}" -f $fname)
+            }
+        }
+        if ((@(1116, 1117) -contains $eid) -and (& $fromSrc 'defender')) {
+            $threat = [string](Get-WETField -Object $ev.Data -Name 'Threat Name' -Default '')
+            if (-not $threat) { $threat = $msg.Substring(0, [Math]::Min(80, $msg.Length)) }
+            $tpath = [string](Get-WETField -Object $ev.Data -Name 'Path' -Default '')
+            $action = if ($eid -eq 1117) { 'blocked/removed' } else { 'detected' }
+            & $addFinding 'WET022' $ev.TimeCreated $ev.Computer '-' '-' (("Defender {0} '{1}' {2}" -f $action, $threat, $tpath.Substring(0, [Math]::Min(100, $tpath.Length))).Trim())
+        }
+        if ((@(7040, 7036) -contains $eid) -and (& $fromSrc 'scm')) {
+            $svc = [string](Get-WETField -Object $ev.Data -Name 'param1' -Default '')
+            if (-not $svc) { $svc = $msg }
+            $state = ('{0} {1} {2}' -f (Get-WETField -Object $ev.Data -Name 'param2' -Default ''), (Get-WETField -Object $ev.Data -Name 'param3' -Default ''), $msg)
+            if ($svc -match $secSvcRx -and $state -match $disabledRx) {
+                & $addFinding 'WET023' $ev.TimeCreated $ev.Computer '-' '-' ("Security service '{0}' changed to: {1}" -f $svc.Substring(0, [Math]::Min(60, $svc.Length)), $state.Trim().Substring(0, [Math]::Min(80, $state.Trim().Length)))
+            }
+        }
+        if (($eid -eq 1149 -and (& $fromSrc 'rdp')) -or $eid -eq 4778) {
+            $rip = [string](Get-WETField -Object $ev.Data -Name 'Param3' -Default '')
+            if (-not $rip) { $rip = [string](Get-WETField -Object $ev.Data -Name 'ClientAddress' -Default '') }
+            $ru = [string](Get-WETField -Object $ev.Data -Name 'Param1' -Default '')
+            if (-not $ru) { $ru = [string](Get-WETField -Object $ev.Data -Name 'AccountName' -Default '') }
+            if ($rip -and -not (Test-WETPrivateIp -IpAddress $rip)) {
+                $what = if ($eid -eq 1149) { 'RDP authentication (1149)' } else { 'RDP session reconnected (4778)' }
+                & $addFinding 'WET019' $ev.TimeCreated $ev.Computer $ru $rip ("{0} for '{1}' from internet IP {2}." -f $what, $ru, $rip)
+            }
+        }
+
         $cmdLine = [string](Get-WETField -Object $ev.Data -Name 'CommandLine' -Default '')
+        if (-not $cmdLine) { $cmdLine = [string](Get-WETField -Object $ev.Data -Name 'Image' -Default '') }
         $scriptBlock = [string](Get-WETField -Object $ev.Data -Name 'ScriptBlockText' -Default '')
         $combinedCmd = ($cmdLine + ' ' + $scriptBlock + ' ' + $msg).Trim()
 
@@ -468,7 +551,7 @@ function Invoke-WinEventTriage {
         }
 
         # WET008: Suspicious service 7045 / 4697
-        if ($eid -in @(7045, 4697)) {
+        if ($eid -eq 4697 -or ($eid -eq 7045 -and (& $fromSrc 'scm'))) {
             $srvName = [string](Get-WETField -Object $ev.Data -Name 'ServiceName' -Default 'unknown')
             $imgPath = [string](Get-WETField -Object $ev.Data -Name 'ImagePath' -Default '')
             if ($imgPath -match $sigPatterns.service_suspicious_regex) {
@@ -477,7 +560,7 @@ function Invoke-WinEventTriage {
         }
 
         # WET009: Scheduled task persistence 4698 / 4702 / 106
-        if ($eid -in @(4698, 4702, 106)) {
+        if ($eid -in @(4698, 4702) -or ($eid -eq 106 -and (& $fromSrc 'tasks'))) {
             $taskName = [string](Get-WETField -Object $ev.Data -Name 'TaskName' -Default 'unknown')
             $taskContent = [string](Get-WETField -Object $ev.Data -Name 'TaskContent' -Default '')
             if (($taskContent + ' ' + $msg) -match $sigPatterns.task_suspicious_regex) {
@@ -486,7 +569,7 @@ function Invoke-WinEventTriage {
         }
 
         # WET010: Audit log cleared 1102 / 104
-        if ($eid -in @(1102, 104)) {
+        if (($eid -in @(1102, 104)) -and (& $fromSrc 'eventlog')) {
             $subj = [string](Get-WETField -Object $ev.Data -Name 'SubjectUserName' -Default 'unknown')
             & $addFinding 'WET010' $ev.TimeCreated $ev.Computer $subj '-' ("Event log cleared (EventID {0}) by '{1}'." -f $eid, $subj)
         }
@@ -498,8 +581,8 @@ function Invoke-WinEventTriage {
         }
 
         # WET012: Defender disabled/tampered/alert
-        if ($eid -in @(5001, 5007, 1116, 1117)) {
-            & $addFinding 'WET012' $ev.TimeCreated $ev.Computer 'Defender' '-' ("Microsoft Defender telemetry EventID {0}: {1}" -f $eid, $msg)
+        if (($eid -in @(5001, 5007, 5010, 5012)) -and (& $fromSrc 'defender')) {
+            & $addFinding 'WET012' $ev.TimeCreated $ev.Computer 'Defender' '-' ("Microsoft Defender protection changed (EventID {0}): {1}" -f $eid, $msg)
         }
 
         # WET013: Audit policy modified 4719

@@ -9,7 +9,8 @@ from pathlib import Path
 from . import __version__
 from .engine import analyze_events
 from .i18n import t_rule
-from .parsers import parse_events_file
+from .evtx import EvtxError
+from .parsers import collect_inputs, parse_events_file, parse_many
 from .reporters import render_report
 from .rules import list_rules
 
@@ -22,8 +23,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    tr_p = sub.add_parser("triage", help="Analyze a JSON event snapshot or Event Viewer XML export.")
-    tr_p.add_argument("input_file", help="Path to .json snapshot or Event Viewer .xml file.")
+    tr_p = sub.add_parser("triage", help="Analyze .evtx logs, JSON snapshots or Event Viewer XML exports.")
+    tr_p.add_argument("inputs", nargs="+", help="One or more .evtx/.json/.xml files or folders with them.")
     tr_p.add_argument("--format", choices=["terminal", "json", "csv", "markdown", "html"], default="terminal")
     tr_p.add_argument("--output", "-o", help="Write report to a file.")
     tr_p.add_argument("--lang", choices=["en", "pt"], default="en")
@@ -34,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     tr_p.add_argument("--anonymize", action="store_true", help="Hash computer and account names using SHA-256.")
     tr_p.add_argument("--no-color", action="store_true")
 
-    rules_p = sub.add_parser("rules", help="List all 18 MITRE ATT&CK detection rules.")
+    rules_p = sub.add_parser("rules", help="List all MITRE ATT&CK detection rules.")
     rules_p.add_argument("--lang", choices=["en", "pt"], default="en")
 
     demo_p = sub.add_parser("demo", help="Run triage over bundled synthetic ransomware and clean baselines.")
@@ -67,15 +68,23 @@ def main(argv: list[str] | None = None) -> int:
             print()
         return 0
 
-    path = Path(args.input_file)
-    if not path.is_file():
-        print(f"Error: input file not found: {path}", file=sys.stderr)
+    paths = [Path(p) for p in args.inputs]
+    missing = [p for p in paths if not p.exists()]
+    if missing:
+        print(f"Error: not found: {', '.join(str(m) for m in missing)}", file=sys.stderr)
         return 2
-
-    events = parse_events_file(path)
+    files = collect_inputs(paths)
+    if not files:
+        print("Error: no .evtx, .json or .xml files found.", file=sys.stderr)
+        return 2
+    try:
+        events = parse_many(files)
+    except (EvtxError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
     report = analyze_events(
         events,
-        source_label=path.name,
+        source_label=", ".join(f.name for f in files[:5]) + (f" (+{len(files) - 5})" if len(files) > 5 else ""),
         business_hours_start=args.bh_start,
         business_hours_end=args.bh_end,
         brute_force_threshold=args.brute_threshold,
@@ -83,7 +92,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     rendered = render_report(report, args.format, lang=args.lang, no_color=args.no_color)
     if args.output:
-        Path(args.output).write_text(rendered, encoding="utf-8")
+        out = Path(args.output)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(rendered, encoding="utf-8")
     else:
         print(rendered)
     return 1 if report.exceeds_threshold(args.fail_on) else 0

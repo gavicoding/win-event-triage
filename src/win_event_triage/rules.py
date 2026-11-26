@@ -1,4 +1,4 @@
-"""Rule catalog for win-event-triage (WET001..WET018) mapped to MITRE ATT&CK."""
+"""Rule catalog for win-event-triage (WET001..WET023) mapped to MITRE ATT&CK."""
 
 from __future__ import annotations
 
@@ -16,16 +16,21 @@ RULES: dict[str, TriageRule] = {
     "WET009": TriageRule("WET009", Severity.HIGH, "Persistence", "T1053.005", (4698, 4702, 106)),
     "WET010": TriageRule("WET010", Severity.CRITICAL, "Defense Evasion", "T1070.001", (1102, 104)),
     "WET011": TriageRule("WET011", Severity.CRITICAL, "Impact", "T1490", (4688, 4104)),
-    "WET012": TriageRule("WET012", Severity.CRITICAL, "Defense Evasion", "T1562.001", (5001, 5007, 1116, 1117)),
+    "WET012": TriageRule("WET012", Severity.CRITICAL, "Defense Evasion", "T1562.001", (5001, 5007, 5010, 5012)),
     "WET013": TriageRule("WET013", Severity.HIGH, "Defense Evasion", "T1562.002", (4719,)),
     "WET014": TriageRule("WET014", Severity.CRITICAL, "Execution", "T1059.001", (4104, 4688)),
     "WET015": TriageRule("WET015", Severity.HIGH, "Lateral Movement", "T1021.001", (4624, 4648)),
     "WET016": TriageRule("WET016", Severity.HIGH, "Defense Evasion", "T1218", (4688,)),
     "WET017": TriageRule("WET017", Severity.MEDIUM, "Initial Access", "T1078", (4672, 4624)),
     "WET018": TriageRule("WET018", Severity.CRITICAL, "Credential Access", "T1003.006", (4662,)),
+    "WET019": TriageRule("WET019", Severity.HIGH, "Lateral Movement", "T1021.001", (1149, 4778)),
+    "WET020": TriageRule("WET020", Severity.HIGH, "Persistence", "T1547.001", (13, 4657)),
+    "WET021": TriageRule("WET021", Severity.CRITICAL, "Impact", "T1486", (11,)),
+    "WET022": TriageRule("WET022", Severity.HIGH, "Execution", "T1204.002", (1116, 1117)),
+    "WET023": TriageRule("WET023", Severity.HIGH, "Defense Evasion", "T1562.001", (7040, 7036)),
 }
 
 
 def list_rules() -> list[TriageRule]:
-    """Return all 18 rules ordered by RuleId."""
+    """Return all rules ordered by RuleId."""
     return [RULES[k] for k in sorted(RULES)]

@@ -77,6 +77,19 @@ jobs:
         run: |
           python -m win_event_triage triage samples/clean-baseline.json --fail-on low --no-color
           python -m win_event_triage triage samples/sample-eventviewer.xml --format html --output "${{ runner.temp }}/wet.html" --fail-on none
+          python -m win_event_triage triage samples/ransomware-intrusion.evtx samples/insider-lateral-movement.evtx --format json --output "${{ runner.temp }}/wet.json" --fail-on none
+          python -m win_event_triage triage samples --fail-on none --no-color
+
+      - name: Sample .evtx files are reproducible from the JSON snapshots
+        env:
+          PYTHONPATH: src
+        run: |
+          for s in ransomware-intrusion insider-lateral-movement clean-baseline; do
+            python tools/make_sample_evtx.py samples/$s.json "${{ runner.temp }}/$s.evtx"
+            cmp samples/$s.evtx "${{ runner.temp }}/$s.evtx"
+          done
+          cmp samples/ransomware-intrusion.evtx docs/samples/ransomware-intrusion.evtx
+        shell: bash
 
       - name: Validate Web engine and Node tests
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'

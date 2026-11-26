@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "win-event-triage"
+version = "1.0.0"
+description = "Read-only Windows Security/System/PowerShell/Defender Event Log triage engine mapped to MITRE ATT&CK (PowerShell + Python + Browser UI)."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+  {name = "Gabriel Souza", email = "gavicoding@gmail.com"}
+]
+keywords = [
+  "windows-security",
+  "event-logs",
+  "dfir",
+  "incident-response",
+  "blue-team",
+  "active-directory",
+  "mitre-attack",
+  "powershell",
+  "kerberoasting",
+  "ransomware-detection"
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security"
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://gavicoding.github.io/win-event-triage/"
+Repository = "https://github.com/gavicoding/win-event-triage"
+Issues = "https://github.com/gavicoding/win-event-triage/issues"
+
+[project.scripts]
+win-event-triage = "win_event_triage.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

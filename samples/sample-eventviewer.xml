@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Events>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Security-Auditing" />
+      <EventID>4769</EventID>
+      <TimeCreated SystemTime="2026-11-25T03:12:00.000Z" />
+      <Channel>Security</Channel>
+      <Computer>DC01.contoso.lab</Computer>
+    </System>
+    <EventData>
+      <Data Name="TargetUserName">ops-user01</Data>
+      <Data Name="ServiceName">MSSQLSvc/SRV-ERP01.contoso.lab:1433</Data>
+      <Data Name="TicketEncryptionType">0x17</Data>
+      <Data Name="IpAddress">10.20.1.99</Data>
+    </EventData>
+  </Event>
+  <Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+    <System>
+      <Provider Name="Microsoft-Windows-Eventlog" />
+      <EventID>1102</EventID>
+      <TimeCreated SystemTime="2026-11-25T03:14:00.000Z" />
+      <Channel>Security</Channel>
+      <Computer>DC01.contoso.lab</Computer>
+    </System>
+    <EventData>
+      <Data Name="SubjectUserName">ops-user01</Data>
+    </EventData>
+  </Event>
+</Events>

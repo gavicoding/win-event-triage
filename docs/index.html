@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>win-event-triage | Windows & AD DFIR Log Triage</title>
+  <meta name="description" content="100% browser-side Windows Event Log and Active Directory triage workbench mapped to MITRE ATT&CK." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo-mark" aria-hidden="true">WET</div>
+        <div>
+          <h1>win-event-triage <span class="ver">v1.0.0</span></h1>
+          <p class="subtitle" data-i18n="hero_sub">Read-only Windows Security, System, PowerShell & Defender event triage mapped to MITRE ATT&CK.</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button id="lang-toggle" class="btn btn-ghost" type="button">PT-BR</button>
+        <button id="theme-toggle" class="btn btn-ghost" type="button" data-i18n="btn_theme">Theme</button>
+        <a class="btn btn-outline" href="https://github.com/gavicoding/win-event-triage" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
+    </header>
+
+    <div class="trust-pill" data-i18n="privacy_banner">Zero upload: Event Viewer XML and JSON log snapshots are analyzed strictly inside your browser tab.</div>
+
+    <section class="controls-bar">
+      <div class="preset-group">
+        <span class="label-inline" data-i18n="presets_label">Load scenario:</span>
+        <button class="btn btn-chip" type="button" data-preset="ransomware" data-i18n="preset_ransom">Ransomware Intrusion Chain</button>
+        <button class="btn btn-chip" type="button" data-preset="insider" data-i18n="preset_insider">Insider & DCSync Escalation</button>
+        <button class="btn btn-chip btn-ok" type="button" data-preset="clean" data-i18n="preset_clean">Clean AD Baseline</button>
+        <label class="btn btn-primary file-btn">
+          <span data-i18n="btn_upload">Upload JSON / Event Viewer XML</span>
+          <input id="file-input" type="file" accept=".json,.xml" hidden />
+        </label>
+      </div>
+      <div class="export-group">
+        <button id="btn-export-html" class="btn btn-outline" type="button">HTML</button>
+        <button id="btn-export-csv" class="btn btn-outline" type="button">CSV</button>
+        <button id="btn-export-json" class="btn btn-outline" type="button">JSON</button>
+        <button id="btn-export-md" class="btn btn-outline" type="button">Markdown</button>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi"><span class="kpi-lbl" data-i18n="kpi_risk">Incident Risk Score</span><strong id="kpi-score" class="kpi-num">0/100</strong></div>
+      <div class="kpi"><span class="kpi-lbl" data-i18n="kpi_events">Events Analyzed</span><strong id="kpi-events" class="kpi-num">0</strong></div>
+      <div class="kpi"><span class="kpi-lbl" data-i18n="sev_critical">Critical</span><strong id="kpi-crit" class="kpi-num c-crit">0</strong></div>
+      <div class="kpi"><span class="kpi-lbl" data-i18n="sev_high">High</span><strong id="kpi-high" class="kpi-num c-high">0</strong></div>
+      <div class="kpi"><span class="kpi-lbl" data-i18n="sev_medium">Medium</span><strong id="kpi-med" class="kpi-num c-med">0</strong></div>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button id="tab-findings" class="tab active" type="button" data-i18n="tab_findings">Findings & Timeline</button>
+      <button id="tab-mitre" class="tab" type="button" data-i18n="tab_mitre">MITRE ATT&CK Coverage</button>
+      <button id="tab-playbook" class="tab" type="button" data-i18n="tab_playbook">Containment Playbook</button>
+    </nav>
+
+    <main id="panel-findings" class="panel">
+      <div class="card">
+        <div class="card-head">
+          <h2 id="source-title" data-i18n="findings_heading">Detected Indicators</h2>
+          <div class="filter-bar">
+            <button class="btn btn-chip active" type="button" data-filter="all" data-i18n="filter_all">All</button>
+            <button class="btn btn-chip" type="button" data-filter="critical" data-i18n="sev_critical">Critical</button>
+            <button class="btn btn-chip" type="button" data-filter="high" data-i18n="sev_high">High</button>
+            <button class="btn btn-chip" type="button" data-filter="medium" data-i18n="sev_medium">Medium</button>
+          </div>
+        </div>
+        <div id="findings-list" class="findings-list"></div>
+      </div>
+    </main>
+
+    <section id="panel-mitre" class="panel" hidden>
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="mitre_heading">Triggered MITRE ATT&CK Tactics & Techniques</h2></div>
+        <div id="mitre-grid" class="mitre-grid"></div>
+      </div>
+    </section>
+
+    <section id="panel-playbook" class="panel" hidden>
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="playbook_heading">Prioritized First-Responder Containment Steps</h2></div>
+        <ol id="playbook-list" class="playbook-list"></ol>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Built by <a href="https://gavicoding.github.io/" target="_blank" rel="noopener noreferrer">Gabriel Souza (@gavicoding)</a></span>
+      <span>MIT License | PowerShell 5.1/7+ + Python CLI + Browser Workbench</span>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

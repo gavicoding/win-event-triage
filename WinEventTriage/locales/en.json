@@ -1,0 +1,114 @@
+{
+  "ui": {
+    "report_title": "win-event-triage DFIR Incident Triage Report",
+    "report_subtitle": "Read-only Windows & Active Directory log triage mapped to MITRE ATT&CK",
+    "host_label": "Source",
+    "events_analyzed": "Events Analyzed",
+    "findings_count": "Findings",
+    "risk_score": "Risk Score",
+    "severity": "Severity",
+    "rule": "Rule",
+    "mitre": "MITRE ATT&CK",
+    "timestamp": "Timestamp (UTC)",
+    "evidence": "Evidence",
+    "containment": "Containment Action",
+    "clean_status": "Clean baseline: zero suspicious Windows event patterns detected.",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "generated_by": "Generated read-only by win-event-triage"
+  },
+  "rules": {
+    "WET001": {
+      "title": "Brute-force or password spraying burst (Event 4625)",
+      "description": "Repeated failed logon events (4625) within a short sliding window from a source IP or targeting multiple domain accounts.",
+      "remediation": "Block or rate-limit offending source IPs at the firewall, enforce Smart Lockout, and review targeted accounts."
+    },
+    "WET002": {
+      "title": "Brute-force burst followed by successful logon (4625 -> 4624)",
+      "description": "A source IP or account suffered repeated authentication failures followed within 15 minutes by a successful logon.",
+      "remediation": "Assume possible credential compromise: revoke active sessions/Kerberos TGTs, force password reset, and verify MFA."
+    },
+    "WET003": {
+      "title": "Potential Kerberoasting activity (4769 RC4 encryption 0x17)",
+      "description": "Service ticket requested with weak RC4-HMAC encryption (0x17) targeting a non-machine SPN, characteristic of offline password cracking.",
+      "remediation": "Rotate affected service account credentials immediately to 25+ char passwords or gMSA, and enforce AES-only Kerberos."
+    },
+    "WET004": {
+      "title": "Account lockout storm detected (Event 4740)",
+      "description": "Multiple user lockouts indicate an active password spray or misconfigured cached credential service.",
+      "remediation": "Identify Caller Computer Name in Event 4740 and isolate the source host or service."
+    },
+    "WET005": {
+      "title": "Credential dumping / LSASS or NTDS access indicator",
+      "description": "Process creation, script block, or handle access targeting LSASS memory or NTDS.dit database extraction.",
+      "remediation": "Isolate the host immediately, enable Credential Guard / RunAsPPL, and rotate krbtgt and domain admin hashes twice."
+    },
+    "WET006": {
+      "title": "Privileged security group membership modified (4728/4732/4756)",
+      "description": "An account was added to Domain Admins, Enterprise Admins, Schema Admins, Administrators, Backup Operators, or Remote Desktop Users.",
+      "remediation": "Verify change against approved ITSM tickets; remove unauthorized members and audit the actor account."
+    },
+    "WET007": {
+      "title": "New user account created off-hours or elevated quickly (4720)",
+      "description": "A newly provisioned local or AD user account appeared outside business hours or received privileged group rights soon after creation.",
+      "remediation": "Disable unapproved accounts immediately and review creator logon session (Event 4624)."
+    },
+    "WET008": {
+      "title": "Suspicious Windows service installed (7045 / 4697)",
+      "description": "A new service points to user-writable paths (Temp, AppData, Public, ProgramData), PsExec patterns, or encoded shell execution.",
+      "remediation": "Stop and inspect the service binary path, collect its SHA-256 hash, and quarantine the originating host."
+    },
+    "WET009": {
+      "title": "Suspicious scheduled task persistence (4698 / 4702 / 106)",
+      "description": "Scheduled task created or updated using encoded PowerShell, LOLBins, or user-writable staging folders.",
+      "remediation": "Export the task XML definition, delete unauthorized persistence triggers, and inspect child processes."
+    },
+    "WET010": {
+      "title": "Windows Security or System event log cleared (1102 / 104)",
+      "description": "Audit trail was explicitly wiped via wevtutil or Event Viewer, strongly associated with post-exploitation defense evasion.",
+      "remediation": "Forward logs to an external SIEM before attackers clear local logs; investigate the subject account in Event 1102/104."
+    },
+    "WET011": {
+      "title": "Shadow copy deletion or recovery sabotage (vssadmin / wmic / bcdedit)",
+      "description": "Commands destroying Volume Shadow Copies or disabling Windows recovery modes, a classic pre-encryption ransomware step.",
+      "remediation": "Disconnect host from SMB/AD networks immediately, preserve volatile memory, and validate immutable offline backups."
+    },
+    "WET012": {
+      "title": "Microsoft Defender disabled, exclusion tampered, or malware alert",
+      "description": "Real-time protection was turned off (5001), exclusions modified (5007), or Defender logged active malware detection (1116/1117).",
+      "remediation": "Re-enable Tamper Protection via central MDM/GPO, remove unauthorized Defender exclusions, and isolate the endpoint."
+    },
+    "WET013": {
+      "title": "Windows audit policy modified (Event 4719)",
+      "description": "System audit policy subcategories were altered, potentially disabling Security logging blind spots.",
+      "remediation": "Restore baseline GPO Advanced Audit Policy settings and investigate who executed auditpol."
+    },
+    "WET014": {
+      "title": "Obfuscated or download-cradle PowerShell execution (4104 / 4688)",
+      "description": "Script block or command line used -EncodedCommand, FromBase64String, Invoke-Expression, DownloadString, or AMSI bypass patterns.",
+      "remediation": "Decode Base64 script content, block outbound C2 domains, and enforce Constrained Language Mode where feasible."
+    },
+    "WET015": {
+      "title": "Suspicious RDP or explicit-credential lateral movement (4624/4648)",
+      "description": "Interactive/RDP logon (Type 10/3) from external public/untrusted IP or explicit credential runas usage across hosts.",
+      "remediation": "Verify VPN/bastion access, terminate active RDP session, and restrict RDP behind NLA + MFA + firewall allowlists."
+    },
+    "WET016": {
+      "title": "Living-off-the-Land binary (LOLBin) abuse detected (4688)",
+      "description": "Signed Windows utilities (certutil, mshta, bitsadmin, regsvr32, wmic) executed remote payload fetches or remote execution.",
+      "remediation": "Quarantine downloaded staging files, block egress URLs, and apply AppLocker/WDAC rules on LOLBins."
+    },
+    "WET017": {
+      "title": "Off-hours privileged logon detected (4672 / 4624)",
+      "description": "Administrative logon occurred outside configured business hours window.",
+      "remediation": "Confirm whether scheduled maintenance occurred; otherwise verify the administrator account activity."
+    },
+    "WET018": {
+      "title": "Potential DCSync / AD replication abuse (Event 4662)",
+      "description": "Directory Service replication GUID (DS-Replication-Get-Changes) invoked by an account that does not end with a Domain Controller '$' machine suffix.",
+      "remediation": "Treat as Tier-0 domain compromise risk: revoke Replicating Directory Changes permissions immediately and rotate krbtgt twice."
+    }
+  }
+}

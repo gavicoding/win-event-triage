@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "computer": "SRV-WEB01.contoso.lab",
+  "scenario": "Normal business-hours Windows Server operational activity",
+  "events": [
+    {"EventId": 4624, "TimeCreated": "2026-11-25T13:15:00Z", "Computer": "SRV-WEB01.contoso.lab", "Data": {"TargetUserName": "adm-gabriel", "LogonType": "10", "IpAddress": "10.20.4.18"}},
+    {"EventId": 4672, "TimeCreated": "2026-11-25T13:15:01Z", "Computer": "SRV-WEB01.contoso.lab", "Data": {"SubjectUserName": "adm-gabriel"}},
+    {"EventId": 4769, "TimeCreated": "2026-11-25T14:20:00Z", "Computer": "DC01.contoso.lab", "Data": {"TargetUserName": "app-reader", "ServiceName": "HTTP/api.contoso.lab", "TicketEncryptionType": "0x12", "IpAddress": "10.20.2.10"}},
+    {"EventId": 4625, "TimeCreated": "2026-11-25T15:00:00Z", "Computer": "SRV-WEB01.contoso.lab", "Data": {"TargetUserName": "j.silva", "IpAddress": "10.20.8.55"}},
+    {"EventId": 4624, "TimeCreated": "2026-11-25T15:00:12Z", "Computer": "SRV-WEB01.contoso.lab", "Data": {"TargetUserName": "j.silva", "LogonType": "3", "IpAddress": "10.20.8.55"}},
+    {"EventId": 4688, "TimeCreated": "2026-11-25T16:10:00Z", "Computer": "SRV-WEB01.contoso.lab", "Data": {"SubjectUserName": "SYSTEM", "CommandLine": "C:\\Windows\\System32\\svchost.exe -k netsvcs"}}
+  ]
+}

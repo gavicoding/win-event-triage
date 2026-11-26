@@ -1,0 +1,114 @@
+{
+  "ui": {
+    "report_title": "Relatorio de Triagem DFIR win-event-triage",
+    "report_subtitle": "Analise somente leitura de logs Windows e Active Directory mapeada ao MITRE ATT&CK",
+    "host_label": "Origem",
+    "events_analyzed": "Eventos Analisados",
+    "findings_count": "Alertas",
+    "risk_score": "Nivel de Risco",
+    "severity": "Gravidade",
+    "rule": "Regra",
+    "mitre": "MITRE ATT&CK",
+    "timestamp": "Data/Hora (UTC)",
+    "evidence": "Evidencia",
+    "containment": "Acao de Contencao",
+    "clean_status": "Baseline limpo: nenhum padrao suspeito detectado nos logs analisados.",
+    "critical": "Critico",
+    "high": "Alto",
+    "medium": "Medio",
+    "low": "Baixo",
+    "generated_by": "Gerado em modo somente leitura por win-event-triage"
+  },
+  "rules": {
+    "WET001": {
+      "title": "Rajada de forca bruta ou password spraying (Evento 4625)",
+      "description": "Multiplas falhas de autenticacao (4625) em janela curta vindas do mesmo IP ou mirando diversas contas do dominio.",
+      "remediation": "Bloqueie ou limite o IP de origem no firewall, ative Smart Lockout e revise as contas alvo."
+    },
+    "WET002": {
+      "title": "Forca bruta seguida de logon bem-sucedido (4625 -> 4624)",
+      "description": "Mesma origem ou usuario acumulou falhas seguidas de logon aceito em ate 15 minutos, forte indicio de senha quebrada.",
+      "remediation": "Trate como comprometimento: derrube sessoes e tickets Kerberos, redefina a senha e confira o MFA."
+    },
+    "WET003": {
+      "title": "Possivel Kerberoasting (Evento 4769 com criptografia RC4 0x17)",
+      "description": "Ticket TGS solicitado com cifra fraca RC4-HMAC (0x17) para SPN de servico, tipico de ataque offline de quebra de senha.",
+      "remediation": "Rotacione imediatamente a senha da conta de servico para 25+ caracteres ou gMSA e force Kerberos AES."
+    },
+    "WET004": {
+      "title": "Onda de bloqueio de contas no dominio (Evento 4740)",
+      "description": "Varios bloqueios simultaneos indicam password spray ativo ou servico rodando com credencial antiga em cache.",
+      "remediation": "Verifique o campo Caller Computer Name no evento 4740 e isole a estacao de origem."
+    },
+    "WET005": {
+      "title": "Indicador de dump de credenciais (LSASS ou NTDS.dit)",
+      "description": "Execucao ou acesso mirando memoria do processo lsass.exe ou extracao da base NTDS.dit.",
+      "remediation": "Isole o servidor da rede imediatamente, ative Credential Guard / RunAsPPL e rotacione krbtgt e admins."
+    },
+    "WET006": {
+      "title": "Alteracao em grupo privilegiado (4728 / 4732 / 4756)",
+      "description": "Conta adicionada em Domain Admins, Enterprise Admins, Schema Admins, Administrators, Backup Operators ou Remote Desktop Users.",
+      "remediation": "Valide contra chamado aprovado; remova membros nao autorizados e audite a conta executora."
+    },
+    "WET007": {
+      "title": "Conta nova criada fora de hora ou elevada rapidamente (4720)",
+      "description": "Usuario criado fora do expediente ou promovido para grupo administrativo logo apos a criacao.",
+      "remediation": "Desative imediatamente a conta nao autorizada e investigue a sessao criadora no evento 4624."
+    },
+    "WET008": {
+      "title": "Servico suspeito instalado no Windows (7045 / 4697)",
+      "description": "Novo servico aponta para pasta gravavel por usuario (Temp, AppData, Public, ProgramData), PsExec ou shell codificado.",
+      "remediation": "Pare e inspecione o binario do servico, colete o hash SHA-256 e isole o host afetado."
+    },
+    "WET009": {
+      "title": "Persistencia suspeita via Tarefa Agendada (4698 / 4702 / 106)",
+      "description": "Tarefa agendada criada ou alterada com PowerShell codificado, LOLBins ou executaveis em pastas temporarias.",
+      "remediation": "Exporte o XML da tarefa, exclua a persistencia maliciosa e rastreie processos filhos."
+    },
+    "WET010": {
+      "title": "Log de auditoria Security ou System apagado (1102 / 104)",
+      "description": "Limpeza explicita de historico de eventos, tatica classica para apagar rastros apos invasao.",
+      "remediation": "Envie logs em tempo real para coletor externo/SIEM e investigue o usuario registrado no evento 1102/104."
+    },
+    "WET011": {
+      "title": "Exclusao de Shadow Copies / sabotagem de recuperacao",
+      "description": "Comandos removendo copias de sombra (vssadmin, wmic) ou desativando reparo via bcdedit antes de criptografia ransomware.",
+      "remediation": "Desconecte o servidor da rede SMB/AD imediatamente e valide os backups imutaveis offline."
+    },
+    "WET012": {
+      "title": "Microsoft Defender desativado, exclusao alterada ou alerta de malware",
+      "description": "Protecao em tempo real desligada (5001), exclusao manipulada (5007) ou malware detectado (1116/1117).",
+      "remediation": "Reative Tamper Protection via GPO/MDM, remova exclusoes suspeitas e isole o endpoint."
+    },
+    "WET013": {
+      "title": "Politica de auditoria do Windows modificada (Evento 4719)",
+      "description": "Subcategorias de auditoria foram alteradas, podendo cegar o registro de novos eventos de seguranca.",
+      "remediation": "Reaplique a GPO padrao de Auditoria Avancada e apure quem executou o auditpol."
+    },
+    "WET014": {
+      "title": "PowerShell ofuscado ou com download remoto (4104 / 4688)",
+      "description": "Script block ou linha de comando usando -EncodedCommand, FromBase64String, IEX, DownloadString ou bypass de AMSI.",
+      "remediation": "Decodifique o script Base64, bloqueie os dominios C2 e restrinja execucao com Constrained Language Mode."
+    },
+    "WET015": {
+      "title": "Movimentacao lateral via RDP ou credencial explicita (4624 / 4648)",
+      "description": "Logon RDP/Rede vindo de IP externo ou uso de runas/credencial explicita entre maquinas internas.",
+      "remediation": "Confirme acesso via VPN/bastion, encerre a sessao RDP e exija NLA + MFA + allowlist."
+    },
+    "WET016": {
+      "title": "Abuso de binario nativo LOLBin detectado (Evento 4688)",
+      "description": "Utilitarios assinados (certutil, mshta, bitsadmin, regsvr32, wmic) baixando payloads ou disparando comandos remotos.",
+      "remediation": "Coloque os arquivos baixados em quarentena, bloqueie a URL e aplique politicas AppLocker/WDAC."
+    },
+    "WET017": {
+      "title": "Logon administrativo fora do horario comercial (4672 / 4624)",
+      "description": "Sessao com privilegios administrativos iniciada fora da janela configurada de expediente.",
+      "remediation": "Confirme se houve janela de manutencao aprovada; caso contrario, audite os passos da sessao."
+    },
+    "WET018": {
+      "title": "Possivel ataque DCSync / replicacao AD indevida (Evento 4662)",
+      "description": "Permissao DS-Replication-Get-Changes acionada por conta que nao termina com '$' de Controlador de Dominio.",
+      "remediation": "Trate como risco critico Tier-0: revogue permissoes de replicacao e rotacione a senha krbtgt duas vezes."
+    }
+  }
+}

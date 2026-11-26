@@ -1,0 +1,12 @@
+{
+  "lsass_ntds_regex": "(?i)(?:sekurlsa|comsvcs\\.dll.*minidump|procdump.*lsass|ntdsutil.*ifm|vssadmin.*ntds)",
+  "service_suspicious_regex": "(?i)(\\\\Temp\\\\|\\\\AppData\\\\|\\\\Users\\\\Public\\\\|\\\\ProgramData\\\\|cmd\\.exe\\s+/c|powershell.*-enc|PSEXESVC)",
+  "task_suspicious_regex": "(?i)(\\\\Temp\\\\|\\\\AppData\\\\|\\\\ProgramData\\\\|-enc|EncodedCommand|powershell|mshta|certutil|rundll32)",
+  "shadow_wipe_regex": "(?i)(vssadmin(\\.exe)?\\s+delete\\s+shadows|wmic(\\.exe)?\\s+shadowcopy\\s+delete|wbadmin(\\.exe)?\\s+delete\\s+(catalog|systemstatebackup)|bcdedit.*recoveryenabled\\s+no)",
+  "powershell_suspicious_regex": "(?i)(-(enc|encodedcommand)\\s+[A-Za-z0-9+/=]{12,}|FromBase64String|Invoke-Expression|\\bIEX\\b|DownloadString|Net\\.WebClient|AmsiUtils)",
+  "lolbin_regex": "(?i)(certutil.*-urlcache|mshta(\\.exe)?\\s+https?://|bitsadmin.*/transfer|regsvr32.*/i:https?://|wmic\\s+/node:)",
+  "dcsync_guids": [
+    "1131f6aa-9c07-11d1-f79f-00c04fc2dcd2",
+    "1131f6ad-9c07-11d1-f79f-00c04fc2dcd2"
+  ]
+}

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  powershell-tests:
+    name: PowerShell Lint & Pester (${{ matrix.shell }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [powershell, pwsh]
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester 5 and PSScriptAnalyzer
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Run PSScriptAnalyzer
+        run: |
+          $issues = @(Invoke-ScriptAnalyzer -Path ./WinEventTriage -Recurse -Settings ./PSScriptAnalyzerSettings.psd1)
+          $issues | Format-Table -AutoSize RuleName, Severity, ScriptName, Line, Message
+          $errors = @($issues | Where-Object Severity -eq 'Error')
+          if ($errors.Count -gt 0) { throw "PSScriptAnalyzer found $($errors.Count) error(s)." }
+
+      - name: Run Pester tests
+        run: |
+          Import-Module Pester -RequiredVersion 5.7.1
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests/powershell'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+  python-and-web-tests:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: actions/setup-node@v4
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        with:
+          node-version: "22"
+
+      - name: Compile and run Python unit tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m compileall -q src tests
+          python -m unittest discover -s tests/python -v
+
+      - name: Smoke test Python CLI across samples
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m win_event_triage triage samples/clean-baseline.json --fail-on low --no-color
+          python -m win_event_triage triage samples/sample-eventviewer.xml --format html --output "${{ runner.temp }}/wet.html" --fail-on none
+
+      - name: Validate Web engine and Node tests
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          node --check docs/app.js
+          node tests/test_web_engine.mjs

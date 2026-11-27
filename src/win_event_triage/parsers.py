@@ -96,7 +96,12 @@ def parse_json_snapshot(raw: str) -> list[NormalizedEvent]:
 
 def parse_eventviewer_xml(raw: str) -> list[NormalizedEvent]:
     """Parse native Windows Event Viewer XML (<Events><Event>...</Event></Events>)."""
-    root = ET.fromstring(raw)
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as exc:
+        # ParseError is not a ValueError; re-raise as one so callers report a bad input file
+        # (exit code 2) instead of a traceback that looks like "findings" (exit code 1).
+        raise ValueError(f"malformed XML: {exc}") from exc
     events: list[NormalizedEvent] = []
 
     def _strip_ns(tag: str) -> str:
